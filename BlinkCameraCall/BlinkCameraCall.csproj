@@ -8,7 +8,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="Extensions\" />
+    <PackageReference Include="Dependency.Shelf" Version="2.2.1" />
+    <PackageReference Include="Shadow.Quack" Version="2.3.0" />
+    <PackageReference Include="Shadow.Quack.Json" Version="1.4.7" />
   </ItemGroup>
 
 </Project>
