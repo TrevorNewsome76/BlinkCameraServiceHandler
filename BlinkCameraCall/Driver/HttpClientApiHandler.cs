@@ -3,6 +3,7 @@ using System.Text;
 using BlinkCameraCall.Interfaces;
 
 namespace BlinkCameraCall.Driver;
+
 internal class HttpClientApiHandler : IApiMethods, IDisposable
 {
     private readonly HttpClientHandler _handler = new HttpClientHandler()
