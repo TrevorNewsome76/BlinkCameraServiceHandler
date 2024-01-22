@@ -1,4 +1,4 @@
-﻿namespace BlinkCameraCall.Interfaces;
+﻿namespace BlinkCommon.Interfaces;
 
 public interface IAccessToken
 {

@@ -1,6 +1,6 @@
 ﻿using System.Net.Http.Headers;
 using System.Text;
-using BlinkCameraCall.Interfaces;
+using BlinkCommon.Interfaces;
 
 namespace BlinkCameraCall.Driver;
 

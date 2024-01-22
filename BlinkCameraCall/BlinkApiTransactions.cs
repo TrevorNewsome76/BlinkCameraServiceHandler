@@ -1,5 +1,5 @@
-﻿using BlinkCameraCall.Extensions;
-using BlinkCameraCall.Interfaces;
+﻿using BlinkCommon.Extensions;
+using BlinkCommon.Interfaces;
 using Dependency;
 using Shadow.Quack;
 
@@ -10,43 +10,43 @@ public class BlinkApiTransactions : IBlinkApiTransactions
     private const string BaseUrl = "https://stagingapi.enquirymax.net";
     private IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
 
-    public IBlinkSettings BlinkSettings { get; private set; }
+    private IBlinkSettings BlinkSettings { get; }
 
     public BlinkApiTransactions(IBlinkSettings settings)
     {
         BlinkSettings = settings;
     }
 
-    public IAccessToken RetrieveAccessToken()
+    public ILoginResponse? AuthLogin()
     {
         var parameters = new List<KeyValuePair<string, string>>();
 
         parameters
-            .Add(new KeyValuePair<string, string>("clientId",
-                BlinkSettings.ClientId));
+            .Add(new KeyValuePair<string, string>("email",
+                BlinkSettings.Email));
+
+        parameters
+            .Add(new KeyValuePair<string, string>("password",
+                BlinkSettings.Password));
 
         var result =
             ApiDriver?
-                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/services/token",
+                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v5/account/login",
                     parameters) ?? string.Empty;
 
-        var accessToken = result.Deserialize<IAccessToken>();
-        ApiDriver?.SetAccessToken(new KeyValuePair<string, string>("Bearer",
-            accessToken?.AccessToken ?? string.Empty));
-        return accessToken ?? Duck.Implement<IAccessToken>(new());
+        return result.Deserialize<ILoginResponse>();
     }
 
-    public string? AuthLogin(IEnumerable<KeyValuePair<string, string>> parameters)
+    public ILogoutResponse? AuthLogout(string accountId, string clientId)
     {
-        throw new NotImplementedException();
+        var result =
+            ApiDriver?
+                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v4/account/{accountId}/client/{clientId}/logout") ?? string.Empty;
+
+        return result.Deserialize<ILogoutResponse>();
     }
 
-    public string? AuthLogout(IEnumerable<KeyValuePair<string, string>> parameters)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string? AuthVerifyPin(IEnumerable<KeyValuePair<string, string>> parameters)
+    public string? AuthVerifyPin()
     {
         throw new NotImplementedException();
     }

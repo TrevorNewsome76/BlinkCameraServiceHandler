@@ -1,4 +1,4 @@
-﻿using BlinkCameraCall.Interfaces;
+﻿using BlinkCommon.Interfaces;
 using Shadow.Quack;
 
 namespace BlinkCameraCall;
