@@ -4,5 +4,5 @@ public interface IBlinkApiTransactions
 {
     ILoginResponse? AuthLogin();
     ILogoutResponse? AuthLogout(string account, string client);
-    string? AuthVerifyPin();
+    IVerifyPinResponse? AuthVerifyPin(string pinCode, string tier, long accountId, long clientId, string accessToken);
 }

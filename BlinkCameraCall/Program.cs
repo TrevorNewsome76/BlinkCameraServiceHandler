@@ -6,7 +6,7 @@ namespace BlinkCameraCall
 {
     internal class Program
     {
-        private static ILoginResponse LoginDetails;
+        private static ILoginResponse loginDetails;
 
         static void Main(string[] args)
         {
@@ -24,21 +24,25 @@ namespace BlinkCameraCall
             bool quitNow = false;
             while (!quitNow)
             {
-                var command = Console.ReadLine();
-                switch (command?.ToLower() ?? string.Empty)
+                var command = Console.ReadLine() ?? string.Empty;
+                var splitString = command.Split(' ');
+                switch (splitString[0]?.ToLower() ?? string.Empty)
                 {
                     case "login":
-                        LoginDetails = new BlinkApiTransactions(settings).AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
-                        Console.WriteLine(LoginDetails?.Auth?.Token != null ? "Successfully logged in." : "FAILED to login.");
+                        loginDetails = new BlinkApiTransactions(settings).AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
+                        Console.WriteLine(loginDetails?.Auth?.Token != null ? "Successfully logged in." : "FAILED to login.");
                         break;
 
                     case "logout":
                         ILogoutResponse? logoutResult = null;
-                        if (LoginDetails?.Account?.Account_Id != null && LoginDetails?.Account?.Client_Id !=null)
-                            logoutResult = new BlinkApiTransactions(settings).AuthLogout(LoginDetails.Account.Account_Id.ToString(), LoginDetails.Account.Client_Id.ToString()) ?? Duck.Implement<ILogoutResponse>(new());
+                        if (loginDetails?.Account?.Account_Id != null && loginDetails?.Account?.Client_Id !=null)
+                            logoutResult = new BlinkApiTransactions(settings).AuthLogout(loginDetails.Account.Account_Id.ToString(), loginDetails.Account.Client_Id.ToString()) ?? Duck.Implement<ILogoutResponse>(new());
                         Console.WriteLine(logoutResult?.Message != null ? "Successfully logged out." : "FAILED to logout.");
                         break;
-
+                    case "pin":
+                        var result = new BlinkApiTransactions(settings).AuthVerifyPin(splitString[1], loginDetails.Account.Tier, loginDetails.Account.Account_Id, loginDetails.Account.Client_Id, loginDetails.Auth?.Token ?? string.Empty);
+                        Console.WriteLine(result?.Message != null ? "(" + result.Code.ToString() + ") " + result.Message: "Unknown");
+                        break;
                     case "quit": 
                     case "exit":
                         Console.WriteLine("Goodbye");

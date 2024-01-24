@@ -34,7 +34,10 @@ public class BlinkApiTransactions : IBlinkApiTransactions
                 .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v5/account/login",
                     parameters) ?? string.Empty;
 
-        return result.Deserialize<ILoginResponse>();
+        var resultObject = result.Deserialize<ILoginResponse>();
+        ApiDriver?.SetAccessToken(resultObject.Auth.Token);
+
+        return resultObject;
     }
 
     public ILogoutResponse? AuthLogout(string accountId, string clientId)
@@ -46,8 +49,13 @@ public class BlinkApiTransactions : IBlinkApiTransactions
         return result.Deserialize<ILogoutResponse>();
     }
 
-    public string? AuthVerifyPin()
+    public IVerifyPinResponse AuthVerifyPin(string pinCode, string tier, long accountId, long clientId, string accessToken)
     {
-        throw new NotImplementedException();
+        var baseString = $"https://rest-{tier}.immedia-semi.com/api/v4/account/{accountId}/client/{clientId}/pin/verify";
+        var result = ApiDriver?.Post(baseString) ?? string.Empty;
+
+
+
+        return result.Deserialize<IVerifyPinResponse>();
     }
 }

@@ -32,9 +32,8 @@ internal class HttpClientApiHandler : IApiMethods, IDisposable
         };
     }
 
-    public void SetAccessToken(KeyValuePair<string, string> accessToken) =>
-        _httpClient.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue(accessToken.Key, accessToken.Value);
+    public void SetAccessToken(string accessToken) =>
+        _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("TOKEN_AUTH", accessToken);
 
     public string Post(string Url, List<KeyValuePair<string, string>> parameters) =>
         _httpClient.PostAsync(Url, new FormUrlEncodedContent(parameters)).Result.Content.ReadAsStringAsync().Result;

@@ -62,3 +62,6 @@ BlinkCameraCallUnitTests/obj/project.nuget.cache
 .vs/BlinkCameraCall/v17/.futdcache.v2
 .vs/BlinkCameraCall/v17/TestStore/0/000.testlog
 .vs/BlinkCameraCall/v17/TestStore/0/testlog.manifest
+.vs/ProjectEvaluation/blinkcameracall.metadata.v7.bin
+.vs/ProjectEvaluation/blinkcameracall.projects.v7.bin
+*.bin
