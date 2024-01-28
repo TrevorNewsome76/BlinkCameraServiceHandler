@@ -52,10 +52,8 @@ public class BlinkApiTransactions : IBlinkApiTransactions
     public IVerifyPinResponse AuthVerifyPin(string pinCode, string tier, long accountId, long clientId, string accessToken)
     {
         var baseString = $"https://rest-{tier}.immedia-semi.com/api/v4/account/{accountId}/client/{clientId}/pin/verify";
-        var result = ApiDriver?.Post(baseString) ?? string.Empty;
-
-
-
+        var serializedPin = "{\"pin\":\"" +pinCode + "\"}";
+        var result = ApiDriver?.Post(baseString, serializedPin) ?? string.Empty;
         return result.Deserialize<IVerifyPinResponse>();
     }
 }
