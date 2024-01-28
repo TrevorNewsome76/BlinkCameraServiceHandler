@@ -5,17 +5,14 @@ using Shadow.Quack;
 
 namespace BlinkCameraCall;
 
-public class BlinkApiTransactions : IBlinkApiTransactions
+public class BlinkApiTransactions(IBlinkSettings? settings) : IBlinkApiTransactions
 {
-    private const string BaseUrl = "https://stagingapi.enquirymax.net";
-    private IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
+    private static IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
 
-    private IBlinkSettings BlinkSettings { get; }
+    private IBlinkSettings BlinkSettings { get; } = settings ?? Duck.Implement<IBlinkSettings>();
 
-    public BlinkApiTransactions(IBlinkSettings settings)
-    {
-        BlinkSettings = settings;
-    }
+    public void SetAccessToken(string accessToken) =>
+        ApiDriver.SetAccessToken(accessToken);
 
     public ILoginResponse? AuthLogin()
     {
@@ -35,7 +32,8 @@ public class BlinkApiTransactions : IBlinkApiTransactions
                     parameters) ?? string.Empty;
 
         var resultObject = result.Deserialize<ILoginResponse>();
-        ApiDriver?.SetAccessToken(resultObject.Auth.Token);
+
+        
 
         return resultObject;
     }

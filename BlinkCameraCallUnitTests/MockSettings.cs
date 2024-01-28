@@ -13,4 +13,13 @@ public class MockSettings
         GrantType = "client_credentials",
         Accept = "application/json",
     });
+
+    public static IBlinkSettings CreateSettings(string email, string password) => Duck.Implement<IBlinkSettings>(new
+    {
+        BaseUrl = "http://localhost",
+        Email = email,
+        Password = password,
+        GrantType = "client_credentials",
+        Accept = "application/json",
+    });
 }

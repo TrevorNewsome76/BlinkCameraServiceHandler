@@ -1,19 +1,20 @@
-using BlinkCameraCall;
 using BlinkCommon.Interfaces;
+using Dependency;
 using FluentAssertions;
 using Shadow.Quack;
 using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests.Auth
 {
-
     [Collection("Sequential")]
-    public class UnitTest_Login
+    public class UnitTestLogin
     {
         private readonly ITestOutputHelper output;
+        private static IBlinkApiTransactions? BlinkAdapter => Shelf.RetrieveInstance<IBlinkApiTransactions>();
 
-        public UnitTest_Login(ITestOutputHelper output)
+        public UnitTestLogin(ITestOutputHelper output)
         {
+
             this.output = output;
         }
 
@@ -22,16 +23,34 @@ namespace BlinkCameraCallUnitTests.Auth
         {
             // assign
             MockAdapter.Initialize(MockSettings.CreateSettings());
-            var expected = MockData.AuthLoginResponse();
+
+            var expected = MockData.AuthLoginCorrectResponse();
             
             // act
-            var actualResult = new BlinkApiTransactions(MockSettings.CreateSettings()).AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
+            var actualResult = BlinkAdapter?.AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
 
             // assert
             actualResult.Should().BeEquivalentTo(expected);
 
             // Results
-            output.WriteLine("Token: {0}", actualResult.Auth.Token);
+            output.WriteLine("Message: {0}", actualResult.Message);
+        }
+
+        [Fact]
+        public void Test_FailedLogin()
+        {
+            // assign
+            MockAdapter.Initialize(MockSettings.CreateSettings("blah", "blah"));
+            var expected = MockData.AuthLoginFailedResponse();
+
+            // act
+            var actualResult = BlinkAdapter?.AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
+
+            // assert
+            actualResult.Should().BeEquivalentTo(expected);
+
+            // Results
+            output.WriteLine("Message: {0}", actualResult.Message);
         }
     }
 }

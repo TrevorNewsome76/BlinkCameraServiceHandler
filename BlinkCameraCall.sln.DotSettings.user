@@ -2,5 +2,9 @@
 	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=29cd18fb_002Daa27_002D4fa5_002D9d44_002Dc577998e329e/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Test_SuccessfulLogin" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;&#xD;
   &lt;TestAncestor&gt;&#xD;
     &lt;TestId&gt;xUnit::C11E8211-C203-43FE-A920-6CCD36B9B42F::net8.0::BlinkCameraCallUnitTests.Auth.UnitTest_Login.Test_SuccessfulLogin&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::C11E8211-C203-43FE-A920-6CCD36B9B42F::net8.0::BlinkCameraCallUnitTests.Auth.UnitTestPin+UnitTest_Pin.Test_SuccessfulPin&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::C11E8211-C203-43FE-A920-6CCD36B9B42F::net8.0::BlinkCameraCallUnitTests.Auth.UnitTestPin+UnitTest_Pin.Test_FailedPin&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::C11E8211-C203-43FE-A920-6CCD36B9B42F::net8.0::BlinkCameraCallUnitTests.Auth.UnitTest_Login.Test_FailedLogin&lt;/TestId&gt;&#xD;
+    &lt;TestId&gt;xUnit::C11E8211-C203-43FE-A920-6CCD36B9B42F::net8.0::BlinkCameraCallUnitTests.Auth.UnitTestLogin.Test_SuccessfulLogin&lt;/TestId&gt;&#xD;
   &lt;/TestAncestor&gt;&#xD;
 &lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

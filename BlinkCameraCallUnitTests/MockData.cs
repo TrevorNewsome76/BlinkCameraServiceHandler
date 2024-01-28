@@ -5,7 +5,7 @@ namespace BlinkCameraCallUnitTests;
 
 public static class MockData
 {
-    public static ILoginResponse AuthLoginResponse() =>
+    public static ILoginResponse AuthLoginCorrectResponse() =>
         Duck.Implement<ILoginResponse>(new
         {
             Account = Account(),
@@ -15,6 +15,16 @@ public static class MockData
             Lockout_time_Remaining = 0,
             Force_Password_Reset = false,
             Allow_Pin_Resend_Seconds = 90
+        });
+
+    public static ILoginResponse AuthLoginFailedResponse() =>
+        Duck.Implement<ILoginResponse>(new
+        {
+            Lockout_time_Remaining = 0,
+            Force_Password_Reset = false,
+            Allow_Pin_Resend_Seconds = 90,
+            Message = "Invalid credentials",
+            Code = 200,
         });
 
     public static IAccount Account() =>
@@ -80,4 +90,15 @@ public static class MockData
             Channel = "sms"
         });
 
+    public static IAuthPinResponse AuthCorrectPinResponse() =>
+        Duck.Implement<IAuthPinResponse>(new
+        {
+            Message = "(1626) Client has been successfully verified"
+        });
+
+    public static IAuthPinResponse AuthIncorrectPinResponse() =>
+        Duck.Implement<IAuthPinResponse>(new
+        {
+            Message = "(1621) Invalid PIN"
+        });
 }
