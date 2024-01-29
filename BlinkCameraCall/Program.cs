@@ -17,7 +17,7 @@ namespace BlinkCameraCall
         {
             Console.WriteLine("Blink Camera Terminal");
 
-            // TODO: Remove hard coded file path
+            // TODO: Remove hard coded file path. Also what happens if file does not exist. Maybe when login prompt used it will create a settings file
             var settings = File.ReadAllText(@"F:\repo\BlinkCameraServiceHandler\settings.json").Deserialize<IBlinkSettings>();
 
             Console.SetCursorPosition(0, 1);
