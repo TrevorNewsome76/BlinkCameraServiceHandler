@@ -9,18 +9,10 @@ namespace BlinkCameraCallUnitTests.Auth;
 public class UnitTestPin
 {
     [Collection("Sequential")]
-    public class UnitTest_Pin
+    public class UnitTest_Pin(ITestOutputHelper output)
     {
-        private readonly ITestOutputHelper output;
-        private static IBlinkApiTransactions? BlinkAdapter
-        {
-            get { return Shelf.RetrieveInstance<IBlinkApiTransactions>(); }
-        }
-
-        public UnitTest_Pin(ITestOutputHelper output)
-        {
-            this.output = output;
-        }
+        private static IBlinkApiTransactions? BlinkAdapter => 
+            Shelf.RetrieveInstance<IBlinkApiTransactions>();
 
         [Fact]
         public void Test_SuccessfulPin()

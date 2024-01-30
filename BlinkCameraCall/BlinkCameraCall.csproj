@@ -25,10 +25,4 @@
     <ProjectReference Include="..\BlinkCommon\BlinkCommon.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <Content Include="settings.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
-  </ItemGroup>
-
 </Project>

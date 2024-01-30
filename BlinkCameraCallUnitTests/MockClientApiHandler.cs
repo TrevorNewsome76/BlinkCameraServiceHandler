@@ -19,13 +19,13 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
     {
         if (string.IsNullOrEmpty(url)) throw new ArgumentException("Url cannot be empty or null.");
 
-        return url switch
+        switch (url)
         {
-            "http://localhost/api/v5/account/login" => (parameters[0].Value == "test@email.com" &&
-                                                        parameters[1].Value == "password")
-                ? MockData.AuthLoginCorrectResponse().Serialize()
-                : MockData.AuthLoginFailedResponse().Serialize(),
-            _ => throw new NotImplementedException()
+            case "https://rest-prod.immedia-semi.com/api/v5/account/login":
+                return (parameters[0].Value == "test@email.com" && parameters[1].Value == "password")
+                    ? MockData.AuthLoginCorrectResponse().Serialize()
+                    : MockData.AuthLoginFailedResponse().Serialize();
+            default: throw new NotImplementedException();
         };
     }
 

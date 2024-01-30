@@ -15,7 +15,8 @@ namespace BlinkCameraCall
 
             // TODO: Remove hard coded file path. Also what happens if file does not exist. Maybe when login prompt used it will create a settings file
 
-            var settings = File.ReadAllText($"{AppContext.BaseDirectory}settings.json").Deserialize<IBlinkSettings>();
+            var settings = Duck.Implement<IBlinkSettings>(new());
+            settings.Load($"{AppContext.BaseDirectory}settings.json");
 
             Console.SetCursorPosition(0, 1);
 

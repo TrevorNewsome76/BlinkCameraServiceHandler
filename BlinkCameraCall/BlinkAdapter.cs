@@ -1,4 +1,6 @@
 ﻿using BlinkCameraCall.Driver;
+
+using BlinkCommon.Extensions;
 using BlinkCommon.Interfaces;
 using Dependency;
 
