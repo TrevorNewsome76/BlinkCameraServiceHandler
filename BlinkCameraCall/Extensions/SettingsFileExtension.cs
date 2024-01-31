@@ -2,9 +2,9 @@
 using BlinkCommon.Interfaces;
 using Shadow.Quack;
 
-namespace BlinkCameraCall;
+namespace BlinkCameraCall.Extensions;
 
-public static class SettingsFile
+public static class SettingsFileExtension
 {
     public static void Load(this IBlinkSettings settings, string path)
     {
@@ -23,5 +23,6 @@ public static class SettingsFile
         settings.Password = fileSettings.Password;
     }
 
-    
+    public static void Save(this IBlinkSettings settings, string path) =>
+        File.WriteAllText($"{path}settings.json", settings.Serialize());
 }

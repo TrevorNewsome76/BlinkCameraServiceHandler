@@ -1,19 +1,29 @@
-﻿using BlinkCameraCall;
-using BlinkCommon.Interfaces;
+﻿using BlinkCommon.Interfaces;
 using FluentAssertions;
 using Shadow.Quack;
-
-using System.IO;
 using BlinkCommon.Extensions;
 using Xunit.Abstractions;
-using System.Runtime;
-using System;
+using BlinkCameraCall.Extensions;
 
 namespace BlinkCameraCallUnitTests.Settings;
 
 [Collection("Sequential")]
 public class UnitTestSettings(ITestOutputHelper output)
 {
+
+    private void HelperMethod_RemoveSettingsFile(string path)
+    {
+        if (File.Exists($"{path}settings.json")) File.Delete($"{path}settings.json");
+        Assert.True(!File.Exists($"{path}settings.json"));
+    }
+
+    private void HelperMethod_CreateDefaultSettingsFile(string path)
+    {
+        File.WriteAllText($"{path}settings.json", MockSettings.CreateSettings().Serialize());
+        Assert.True(File.Exists($"{path}settings.json"));
+    }
+
+
     [Fact]
     public void Test_SuccessfulCreateSettingsFile()
     {
@@ -22,8 +32,7 @@ public class UnitTestSettings(ITestOutputHelper output)
         var actualResult = Duck.Implement<IBlinkSettings>(new());
         var expectedResult = MockSettings.CreateSettings();
 
-        // If File already exists then clean down
-        if (File.Exists($"{path}settings.json")) File.Delete($"{path}settings.json");
+        HelperMethod_RemoveSettingsFile(path);
 
         // act
         actualResult.Load(AppContext.BaseDirectory);
@@ -42,8 +51,8 @@ public class UnitTestSettings(ITestOutputHelper output)
         var expectedResult = MockSettings.CreateSettings();
 
         // If File already exists then clean down and create new one
-        if (File.Exists($"{path}settings.json")) File.Delete($"{path}settings.json");
-        File.WriteAllText($"{path}settings.json", MockSettings.CreateSettings().Serialize());
+        HelperMethod_RemoveSettingsFile(path);
+        HelperMethod_CreateDefaultSettingsFile(path);
 
         // act
         actualResult.Load(AppContext.BaseDirectory);
@@ -53,8 +62,54 @@ public class UnitTestSettings(ITestOutputHelper output)
         actualResult.Should().BeEquivalentTo(expectedResult);
 
         // Clear up
-        if (File.Exists($"{path}settings.json")) File.Delete($"{path}settings.json");
-        Assert.True(!File.Exists($"{path}settings.json"));
+        HelperMethod_RemoveSettingsFile(path);
+    }
+
+    [Fact]
+    public void Test_SuccessfulSaveNewSettingsFile()
+    {
+        // assign
+        var path = $"{AppContext.BaseDirectory}";
+        var actualResult = Duck.Implement<IBlinkSettings>(new());
+        var expectedResult = MockSettings.CreateSettings("Foo", "Bar");
+
+        // If File already exists then clean down
+        HelperMethod_RemoveSettingsFile(path);
+
+        // act
+        MockSettings.CreateSettings("Foo", "Bar").Save(AppContext.BaseDirectory);
+        actualResult.Load(AppContext.BaseDirectory);
+
+        // assert
+        Assert.True(File.Exists($"{path}settings.json"));
+        actualResult.Should().BeEquivalentTo(expectedResult);
+
+        // Clear up
+        HelperMethod_RemoveSettingsFile(path);
+    }
+
+    [Fact]
+    public void Test_SuccessfulSaveOverExistingSettingsFile()
+    {
+        // assign
+        var path = $"{AppContext.BaseDirectory}";
+        var actualResult = Duck.Implement<IBlinkSettings>(new());
+        var expectedResult = MockSettings.CreateSettings("Foo", "Bar");
+
+        // If File already exists then clean down
+        HelperMethod_RemoveSettingsFile(path);
+        HelperMethod_CreateDefaultSettingsFile(path);
+
+        // act
+        MockSettings.CreateSettings("Foo", "Bar").Save(AppContext.BaseDirectory);
+        actualResult.Load(AppContext.BaseDirectory);
+
+        // assert
+        Assert.True(File.Exists($"{path}settings.json"));
+        actualResult.Should().BeEquivalentTo(expectedResult);
+
+        // Clear up
+        HelperMethod_RemoveSettingsFile(path);
     }
 }
 
