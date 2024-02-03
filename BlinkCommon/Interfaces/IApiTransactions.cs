@@ -1,6 +1,4 @@
-﻿using BlinkCommon.Interfaces;
-
-namespace BlinkCommon;
+﻿namespace BlinkCommon.Interfaces;
 
 public interface IApiTransactions
 {

@@ -1,4 +1,3 @@
-using BlinkCommon;
 using BlinkCommon.Interfaces;
 using Dependency;
 using FluentAssertions;

@@ -1,5 +1,4 @@
-﻿using BlinkCommon;
-using BlinkCommon.Interfaces;
+﻿using BlinkCommon.Interfaces;
 
 namespace BlinkCameraCall;
 

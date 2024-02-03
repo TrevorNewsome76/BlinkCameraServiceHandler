@@ -1,5 +1,4 @@
-﻿using BlinkCommon;
-using BlinkCommon.Extensions;
+﻿using BlinkCommon.Extensions;
 using BlinkCommon.Interfaces;
 using Dependency;
 using Shadow.Quack;
