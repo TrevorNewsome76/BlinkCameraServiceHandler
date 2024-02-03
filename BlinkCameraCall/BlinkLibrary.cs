@@ -4,16 +4,10 @@ using Shadow.Quack;
 
 namespace BlinkCameraCall;
 
-public class BlinkLibrary
+public class BlinkLibrary(IBlinkSettings settings)
 {
-    private ISessionDetails _sessionDetails;
-    private readonly BlinkAdapter _adapter;
-
-    public BlinkLibrary(IBlinkSettings settings)
-    {
-        _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
-        _adapter = new BlinkAdapter(settings);
-    }
+    private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
+    private readonly BlinkAdapter _adapter = new(settings);
 
     public string Login(string[] arguments)
     {

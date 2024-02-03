@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 namespace BlinkCameraCallUnitTests.Auth
 {
     [Collection("Sequential")]
-    public class UnitTestLogin(ITestOutputHelper output)
+    public class UnitTest_Login(ITestOutputHelper output)
     {
         private static IApiTransactions? BlinkAdapter => Shelf.RetrieveInstance<IApiTransactions>();
 
@@ -44,6 +44,32 @@ namespace BlinkCameraCallUnitTests.Auth
 
             //Results
             output.WriteLine("Message: {0}", actualResult.Message);
+        }
+
+        [Fact]
+        public void Test_SetAccessTokenToNulAndFail()
+        {
+            // assign
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
+
+            // act
+            var actualResult = BlinkAdapter?.SetAccessToken(null);
+
+            // assert
+            actualResult.Should().BeFalse();
+        }
+
+        [Fact]
+        public void Test_SetAccessTokenToValueAndPass()
+        {
+            // assign
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
+
+            // act
+            var actualResult = BlinkAdapter?.SetAccessToken("BU8fOjaF4E5POf4WTRm5wA");
+
+            // assert
+            actualResult.Should().BeTrue();
         }
     }
 }

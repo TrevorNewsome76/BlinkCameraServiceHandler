@@ -61,6 +61,9 @@ public class UnitTestSettings(ITestOutputHelper output)
         Assert.True(File.Exists($"{path}settings.json"));
         actualResult.Should().BeEquivalentTo(expectedResult);
 
+        // output
+        output.WriteLine($"url: {path}settings.json");
+
         // Clear up
         HelperMethod_RemoveSettingsFile(path);
     }

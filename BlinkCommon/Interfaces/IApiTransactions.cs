@@ -2,7 +2,7 @@
 
 public interface IApiTransactions
 {
-    void SetAccessToken(string accessToken);
+    bool SetAccessToken(string accessToken);
     ILoginResponse? AuthLogin();
     ILogoutResponse? AuthLogout(IAccount account);
     IVerifyPinResponse? AuthVerifyPin(IAccount account, string pinCode);

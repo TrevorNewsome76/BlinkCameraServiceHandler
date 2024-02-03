@@ -11,7 +11,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
 
     private IBlinkSettings BlinkSettings { get; } = settings;
 
-    public void SetAccessToken(string accessToken) =>
+    public bool SetAccessToken(string accessToken) =>
         ApiDriver.SetAccessToken(accessToken);
 
     public ILoginResponse? AuthLogin()

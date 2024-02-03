@@ -7,10 +7,17 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 {
     public string AccessToken { get; set; } = string.Empty;
 
-    public void SetAccessToken(string accessToken)
+    public bool SetAccessToken(string accessToken)
     {
         if (accessToken == "BU8fOjaF4E5POf4WTRm5wA")
+        {
             AccessToken = accessToken;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     public string Post(string url, List<KeyValuePair<string, string>> parameters)

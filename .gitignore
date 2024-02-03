@@ -79,3 +79,6 @@ Settings.bak.json
 BlinkCameraCall/settings.json
 *.bin
 *.bin
+*.bin
+.vs/ProjectEvaluation/blinkcameracall.metadata.v7.bin
+.vs/ProjectEvaluation/blinkcameracall.projects.v7.bin

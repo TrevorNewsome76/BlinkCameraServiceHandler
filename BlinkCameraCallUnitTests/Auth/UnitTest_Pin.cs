@@ -6,10 +6,10 @@ using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests.Auth;
 
-public class UnitTestPin
+public class UnitTest_Pin
 {
     [Collection("Sequential")]
-    public class UnitTest_Pin(ITestOutputHelper output)
+    public class UnitTest_VerifyPin(ITestOutputHelper output)
     {
         private static IApiTransactions? MockAdapter => 
             Shelf.RetrieveInstance<IApiTransactions>();
