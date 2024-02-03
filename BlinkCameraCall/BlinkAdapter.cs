@@ -4,13 +4,13 @@ using Dependency;
 
 namespace BlinkCameraCall;
 
-public class BlinkAdapter :IAdapter
+public class BlinkAdapter : IAdapter
 {
     public BlinkAdapter(IBlinkSettings configuration)
     {
         Shelf.Clear();
         Shelf.ShelveInstance(ApiDriver.HttpClientApiHandler());
-        Shelf.ShelveInstance(BlinkApiInterface.Initialize(configuration));
+        Shelf.ShelveInstance(ApiInterface.Initialize(configuration));
 
     }
 }

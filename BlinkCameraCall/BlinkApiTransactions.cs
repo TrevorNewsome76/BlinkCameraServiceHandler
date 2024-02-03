@@ -6,7 +6,7 @@ using Shadow.Quack;
 
 namespace BlinkCameraCall;
 
-public class BlinkApiTransactions(IBlinkSettings settings) : IApiTransactions
+public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
 {
     private static IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
 
