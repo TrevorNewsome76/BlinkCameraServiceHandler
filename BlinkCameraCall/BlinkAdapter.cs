@@ -11,6 +11,5 @@ public class BlinkAdapter : IAdapter
         Shelf.Clear();
         Shelf.ShelveInstance(ApiDriver.HttpClientApiHandler());
         Shelf.ShelveInstance(ApiInterface.Initialize(configuration));
-
     }
 }

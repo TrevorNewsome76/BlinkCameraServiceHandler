@@ -11,7 +11,7 @@ namespace BlinkCameraCall
         static void Main()
         {
 
-            var sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
+            //var sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
 
             Console.WriteLine("Blink Camera Terminal");
 
@@ -22,48 +22,25 @@ namespace BlinkCameraCall
 
             Console.SetCursorPosition(0, 1);
 
-            var blinkAdapter = new BlinkAdapter(settings);
+            
+            var blinkLibrary = new BlinkLibrary(settings);
 
             bool quitNow = false;
             while (!quitNow)
             {
                 var command = Console.ReadLine() ?? string.Empty;
-                var parameters = command.Split(' ');
-                switch (parameters[0]?.ToLower() ?? string.Empty)
+                var arguments = command.Split(' ');
+                switch (arguments[0]?.ToLower() ?? string.Empty)
                 {
                     case "login":
-                        var loginResponse = blinkAdapter.Login(parameters);
-                        sessionDetails = loginResponse.ConvertToSessionDetails();
-
-                        if (sessionDetails.LoggedInStatus)
-                        {
-                            blinkAdapter.SetAccessToken(sessionDetails.Auth?.Token ?? string.Empty);
-                            Console.WriteLine("Login to the Blink Service successful.");
-                        }
-                        else
-                            Console.WriteLine($"Login to the Blink Service failed: {loginResponse.Message}");
+                        Console.WriteLine(blinkLibrary.Login(arguments));
                         break;
 
                     case "logout":
-                        if (sessionDetails?.Account is not null && sessionDetails.LoggedInStatus)
-                        {
-                            sessionDetails.LoggedInStatus = false;
-                            ILogoutResponse logoutResult = blinkAdapter.Logout(sessionDetails.Account);
-                            Console.WriteLine(logoutResult?.Message != null ? "Successfully logged out." : "FAILED to logout.");
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Not currently logged into Blink service.");
-                        }
+                        Console.WriteLine(blinkLibrary.Logout());
                         break;
-                        
-                    case "pin":
-                        if (sessionDetails?.Account is not null && sessionDetails.LoggedInStatus)
-                        {
-                            var setPinResponse = blinkAdapter.VerifyPin(sessionDetails.Account, parameters[1]);
-                            Console.WriteLine(setPinResponse.Message);
-                        }
-
+                    case "verify":
+                        Console.WriteLine(blinkLibrary.Verify(arguments));
                         break;
                     case "quit": 
                     case "exit":
@@ -72,7 +49,7 @@ namespace BlinkCameraCall
                         break;
 
                     case "help":
-                        Console.WriteLine("LOGIN            Logs into Blink account (using settings file."); 
+                        Console.WriteLine(blinkLibrary.Help(arguments)); 
                         Console.WriteLine("PIN <code>       Verifies sms pin number sent after new login.");
                         Console.WriteLine("QUIT, EXIT       Exits program.");
                         Console.WriteLine("HELP             Provides Help information for Windows commands.");
@@ -83,6 +60,7 @@ namespace BlinkCameraCall
                         Console.WriteLine("Unknown Command " + command);
                         break;
                 }
+                Console.WriteLine();
             }
         }
     }
