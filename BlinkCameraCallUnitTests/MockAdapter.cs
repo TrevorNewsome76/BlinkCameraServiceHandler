@@ -6,10 +6,10 @@ namespace BlinkCameraCallUnitTests;
 
 public class MockAdapter
 {
-    public static void Initialize(IBlinkSettings configuration)
+    public MockAdapter(IBlinkSettings configuration)
     {
         Shelf.Clear();
-        Shelf.ShelveInstance(BlinkApiInterface.Initialize(configuration));
         Shelf.ShelveInstance(MockApiDriver.MockHttpClientApiDriver());
+        Shelf.ShelveInstance(BlinkApiInterface.Initialize(configuration));
     }
 }

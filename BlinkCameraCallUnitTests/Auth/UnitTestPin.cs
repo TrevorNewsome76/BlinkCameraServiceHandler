@@ -1,4 +1,5 @@
-﻿using BlinkCommon.Interfaces;
+﻿using BlinkCommon;
+using BlinkCommon.Interfaces;
 using Dependency;
 
 using FluentAssertions;
@@ -11,19 +12,21 @@ public class UnitTestPin
     [Collection("Sequential")]
     public class UnitTest_Pin(ITestOutputHelper output)
     {
-        private static IBlinkApiTransactions? BlinkAdapter => 
-            Shelf.RetrieveInstance<IBlinkApiTransactions>();
+        private static IApiTransactions? MockAdapter => 
+            Shelf.RetrieveInstance<IApiTransactions>();
 
         [Fact]
         public void Test_SuccessfulPin()
         {
             // assign
-            MockAdapter.Initialize(MockSettings.CreateSettings());
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+            ISessionDetails sessionDetails = MockData.CreateValidLoggedInSessionDetails();
+
             var expected = MockData.AuthCorrectPinResponse();
 
             // act
-            var actualResult = BlinkAdapter?
-                .AuthVerifyPin("987654", "007", 123456, 7890, null!);
+            var actualResult = MockAdapter?
+                .AuthVerifyPin(sessionDetails.Account!, "987654");
                                
 
             // assert
@@ -37,12 +40,14 @@ public class UnitTestPin
         public void Test_FailedPin()
         {
             // assign
-            MockAdapter.Initialize(MockSettings.CreateSettings());
+            var mockAdapter =  new MockAdapter(MockSettings.CreateSettings());
+            ISessionDetails sessionDetails = MockData.CreateValidLoggedInSessionDetails();
+
             var expected = MockData.AuthIncorrectPinResponse();
 
             // act
-            var actualResult = BlinkAdapter?
-                .AuthVerifyPin("111111", "007", 123456, 7890, null!);
+            var actualResult = MockAdapter?
+                .AuthVerifyPin(sessionDetails.Account!, "11111");
 
 
             // assert

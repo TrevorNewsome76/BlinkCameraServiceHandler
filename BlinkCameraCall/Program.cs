@@ -1,7 +1,5 @@
 ﻿using BlinkCameraCall.Extensions;
-using BlinkCommon.Extensions;
 using BlinkCommon.Interfaces;
-using Dependency;
 
 using Shadow.Quack;
 
@@ -12,6 +10,9 @@ namespace BlinkCameraCall
 
         static void Main()
         {
+
+            var sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
+
             Console.WriteLine("Blink Camera Terminal");
 
             // TODO: Remove hard coded file path. Also what happens if file does not exist. Maybe when login prompt used it will create a settings file
@@ -21,7 +22,7 @@ namespace BlinkCameraCall
 
             Console.SetCursorPosition(0, 1);
 
-            BlinkAdapter.Initialize(settings);
+            var blinkAdapter = new BlinkAdapter(settings);
 
             bool quitNow = false;
             while (!quitNow)
@@ -31,15 +32,38 @@ namespace BlinkCameraCall
                 switch (parameters[0]?.ToLower() ?? string.Empty)
                 {
                     case "login":
-                        Console.WriteLine(BlinkAdapter.Login(parameters) + $" ({settings.Email})");
+                        var loginResponse = blinkAdapter.Login(parameters);
+                        sessionDetails = loginResponse.ConvertToSessionDetails();
+
+                        if (sessionDetails.LoggedInStatus)
+                        {
+                            blinkAdapter.SetAccessToken(sessionDetails.Auth?.Token ?? string.Empty);
+                            Console.WriteLine("Login to the Blink Service successful.");
+                        }
+                        else
+                            Console.WriteLine($"Login to the Blink Service failed: {loginResponse.Message}");
                         break;
 
                     case "logout":
-                        Console.WriteLine(BlinkAdapter.Logout());
+                        if (sessionDetails?.Account is not null && sessionDetails.LoggedInStatus)
+                        {
+                            sessionDetails.LoggedInStatus = false;
+                            ILogoutResponse logoutResult = blinkAdapter.Logout(sessionDetails.Account);
+                            Console.WriteLine(logoutResult?.Message != null ? "Successfully logged out." : "FAILED to logout.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Not currently logged into Blink service.");
+                        }
                         break;
                         
                     case "pin":
-                        Console.WriteLine(BlinkAdapter.VerifyPin(parameters));
+                        if (sessionDetails?.Account is not null && sessionDetails.LoggedInStatus)
+                        {
+                            var setPinResponse = blinkAdapter.VerifyPin(sessionDetails.Account, parameters[1]);
+                            Console.WriteLine(setPinResponse.Message);
+                        }
+
                         break;
                     case "quit": 
                     case "exit":

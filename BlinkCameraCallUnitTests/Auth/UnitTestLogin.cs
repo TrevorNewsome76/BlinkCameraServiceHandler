@@ -1,3 +1,4 @@
+using BlinkCommon;
 using BlinkCommon.Interfaces;
 using Dependency;
 using FluentAssertions;
@@ -9,13 +10,13 @@ namespace BlinkCameraCallUnitTests.Auth
     [Collection("Sequential")]
     public class UnitTestLogin(ITestOutputHelper output)
     {
-        private static IBlinkApiTransactions? BlinkAdapter => Shelf.RetrieveInstance<IBlinkApiTransactions>();
+        private static IApiTransactions? BlinkAdapter => Shelf.RetrieveInstance<IApiTransactions>();
 
         [Fact]
         public void Test_SuccessfulLogin()
         {
             //assign
-            MockAdapter.Initialize(MockSettings.CreateSettings());
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
 
             var expected = MockData.AuthLoginCorrectResponse();
 
@@ -33,7 +34,7 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_FailedLogin()
         {
             //assign
-            MockAdapter.Initialize(MockSettings.CreateSettings("blah", "blah"));
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
             var expected = MockData.AuthLoginFailedResponse();
 
             //act
