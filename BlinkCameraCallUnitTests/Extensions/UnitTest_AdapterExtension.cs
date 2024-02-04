@@ -1,10 +1,6 @@
 ﻿using BlinkCameraCall;
-using BlinkCameraCall.Driver;
-
 using BlinkCommon.Interfaces;
 using Dependency;
-using FluentAssertions;
-using Shadow.Quack;
 
 using Xunit.Abstractions;
 

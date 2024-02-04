@@ -1,5 +1,7 @@
 ﻿using BlinkCameraCall;
 using FluentAssertions;
+using System.Runtime;
+
 using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests;
@@ -17,7 +19,7 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "Login to the Blink Service failed: Invalid credentials";
 
         //act
-        var actualResult = new BlinkLibrary(mockAdapter).Login(arguments);
+        var actualResult = new BlinkLibrary(mockAdapter).Login("foo", "bar");
 
         //assert
         actualResult.Should().BeEquivalentTo(expected);
@@ -35,7 +37,9 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "Login to the Blink Service successful.";
 
         //act
-        var actualResult = new BlinkLibrary(mockAdapter).Login(arguments);
+        var actualResult = new BlinkLibrary(mockAdapter).Login(
+            MockSettings.CreateSettings().Email, 
+            MockSettings.CreateSettings().Password);
 
         //assert
         actualResult.Should().BeEquivalentTo(expected);
@@ -70,7 +74,10 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         //act
         var blinkLib = new BlinkLibrary(mockAdapter);
         
-        var loginResult = blinkLib.Login(Array.Empty<string>());
+        var loginResult = blinkLib.Login(
+        MockSettings.CreateSettings().Email,
+            MockSettings.CreateSettings().Password);
+        
         Assert.NotEmpty(loginResult);
 
         var actualResult = blinkLib .Logout();
@@ -118,7 +125,10 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         //act
         var blinkLib = new BlinkLibrary(mockAdapter);
 
-        var loginResult = blinkLib.Login(Array.Empty<string>());
+        var loginResult = blinkLib.Login(
+        MockSettings.CreateSettings().Email,
+            MockSettings.CreateSettings().Password);
+
         Assert.NotEmpty(loginResult);
 
         var actualResult = blinkLib.VerifyPin(arguments);
@@ -144,7 +154,10 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         //act
         var blinkLib = new BlinkLibrary(mockAdapter);
 
-        var loginResult = blinkLib.Login(Array.Empty<string>());
+        var loginResult = blinkLib.Login(
+            MockSettings.CreateSettings().Email,
+            MockSettings.CreateSettings().Password);
+        
         Assert.NotEmpty(loginResult);
 
         var actualResult = blinkLib.VerifyPin(arguments);

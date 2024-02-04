@@ -22,7 +22,7 @@ public static class MockData
         {
             Lockout_time_Remaining = 0,
             Force_Password_Reset = false,
-            Allow_Pin_Resend_Seconds = 90,
+            Allow_Pin_Resend_Seconds = 0,
             Message = "Invalid credentials",
             Code = 200,
         });

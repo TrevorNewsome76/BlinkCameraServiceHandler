@@ -8,9 +8,9 @@ public class BlinkLibrary(IAdapter adapter)
 {
     private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
 
-    public string Login(string[] arguments)
+    public string Login(string username, string password)
     {
-        var loginResponse = adapter.Login(arguments);
+        var loginResponse = adapter.Login(username,password);
         _sessionDetails = loginResponse.ConvertToSessionDetails();
 
         if (_sessionDetails.LoggedInStatus)

@@ -14,7 +14,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     public bool SetAccessToken(string accessToken) =>
         ApiDriver.SetAccessToken(accessToken);
 
-    public ILoginResponse? AuthLogin()
+    public ILoginResponse? AuthLogin(string username, string password)
     {
         var parameters = new List<KeyValuePair<string, string>>
         {

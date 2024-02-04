@@ -31,7 +31,7 @@ namespace BlinkCameraCall
                 switch (arguments[0]?.ToLower() ?? string.Empty)
                 {
                     case "login":
-                        Console.WriteLine(blinkLibrary.Login(arguments));
+                        Console.WriteLine(blinkLibrary.Login("Test","Test"));
                         break;
 
                     case "logout":

@@ -2,6 +2,8 @@ using BlinkCommon.Interfaces;
 using Dependency;
 using FluentAssertions;
 using Shadow.Quack;
+using System.Runtime;
+
 using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests.Auth
@@ -20,7 +22,9 @@ namespace BlinkCameraCallUnitTests.Auth
             var expected = MockData.AuthLoginCorrectResponse();
 
             //act
-           var actualResult = BlinkAdapter?.AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
+           var actualResult = BlinkAdapter?.AuthLogin(
+               MockSettings.CreateSettings().Email, MockSettings.CreateSettings().Password) 
+                              ?? Duck.Implement<ILoginResponse>(new());
 
             //assert
             actualResult.Should().BeEquivalentTo(expected);
@@ -33,11 +37,11 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_FailedLogin()
         {
             //assign
-            var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
             var expected = MockData.AuthLoginFailedResponse();
 
             //act
-            var actualResult = BlinkAdapter?.AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
+            var actualResult = BlinkAdapter?.AuthLogin("blah", "blah") 
+                               ?? Duck.Implement<ILoginResponse>(new());
 
             //assert
             actualResult.Should().BeEquivalentTo(expected);
@@ -50,7 +54,6 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_SetAccessTokenToNulAndFail()
         {
             // assign
-            var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
 
             // act
             var actualResult = BlinkAdapter?.SetAccessToken(null!);
@@ -63,7 +66,6 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_SetAccessTokenToValueAndPass()
         {
             // assign
-            var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
 
             // act
             var actualResult = BlinkAdapter?.SetAccessToken("BU8fOjaF4E5POf4WTRm5wA");
