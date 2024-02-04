@@ -27,6 +27,18 @@ public static class MockData
             Code = 200,
         });
 
+    public static ILogoutResponse AuthLogoutCorrectResponse() =>
+        Duck.Implement<ILogoutResponse>(new
+        {
+            Message = "logout"
+        });
+    
+    public static ILogoutResponse AuthLogoutIncorrectResponse() =>
+        Duck.Implement<ILogoutResponse>(new
+        {
+            Message = "logout"
+        });
+
     public static IAccount ValidAccount() =>
         Duck.Implement<IAccount>(new
         {

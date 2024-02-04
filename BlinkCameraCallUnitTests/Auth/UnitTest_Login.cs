@@ -53,7 +53,7 @@ namespace BlinkCameraCallUnitTests.Auth
             var mockAdapter = new MockAdapter(MockSettings.CreateSettings("blah", "blah"));
 
             // act
-            var actualResult = BlinkAdapter?.SetAccessToken(null);
+            var actualResult = BlinkAdapter?.SetAccessToken(null!);
 
             // assert
             actualResult.Should().BeFalse();

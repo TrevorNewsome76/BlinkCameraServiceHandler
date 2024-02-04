@@ -11,8 +11,6 @@ namespace BlinkCameraCall
         static void Main()
         {
 
-            //var sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
-
             Console.WriteLine("Blink Camera Terminal");
 
             // TODO: Remove hard coded file path. Also what happens if file does not exist. Maybe when login prompt used it will create a settings file
@@ -23,7 +21,7 @@ namespace BlinkCameraCall
             Console.SetCursorPosition(0, 1);
 
             
-            var blinkLibrary = new BlinkLibrary(settings);
+            var blinkLibrary = new BlinkLibrary(new BlinkAdapter(settings));
 
             bool quitNow = false;
             while (!quitNow)
@@ -40,7 +38,7 @@ namespace BlinkCameraCall
                         Console.WriteLine(blinkLibrary.Logout());
                         break;
                     case "verify":
-                        Console.WriteLine(blinkLibrary.Verify(arguments));
+                        Console.WriteLine(blinkLibrary.VerifyPin(arguments));
                         break;
                     case "quit": 
                     case "exit":
