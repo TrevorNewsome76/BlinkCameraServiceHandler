@@ -5,6 +5,15 @@ namespace BlinkCameraCallUnitTests.Extensions;
 
 public static class CommandProcessorExtension
 {
+
+    private static readonly string[] ValidCommands = new[]
+    {
+        "login",
+        "logout",
+        "varifypin",
+        "exit",
+    };
+
     public static ICommandAndArguments ProcessCommandString(this string consoleCommand)
     {
         return consoleCommand.FormatCommand();
@@ -12,32 +21,40 @@ public static class CommandProcessorExtension
 
     private static ICommandAndArguments FormatCommand(this string consoleCommand)
     {
-        if (string.IsNullOrEmpty(consoleCommand)) return Duck.Implement<ICommandAndArguments>(
-            new
-            {
-                ErrorMessage = "Null or empty command. Cannot process nothing.",
-            });
-
-        var command = consoleCommand.ToLower();
-        var commandAndArguments = command.Split(" -");
-
-        if (commandAndArguments.Length > 1)
+        if (string.IsNullOrEmpty(consoleCommand))
         {
-            var arguments = commandAndArguments[Range.StartAt(1)];
-            return Duck.Implement<ICommandAndArguments>(new
-            {
-                Command = commandAndArguments[0],
-                Arguments = arguments,
-            });
+            return Duck.Implement<ICommandAndArguments>(
+                new
+                {
+                    ErrorMessage = "Null or empty command. Cannot process nothing.",
+                    Valid = false,
+                });
         }
-        else
-        {
-            return Duck.Implement<ICommandAndArguments>(new
-            {
-                Command = commandAndArguments[0],
-            });
 
-        }
+        return CreateReturnObject(consoleCommand.ToLower().Split(" -")).ValidateCommand();
     }
 
+    private static ICommandAndArguments CreateReturnObject(string[] commandAndArguments) =>
+        (commandAndArguments.Length > 1) 
+            ?
+            Duck.Implement<ICommandAndArguments>(new
+            {
+                Command = commandAndArguments[0],
+                Arguments = commandAndArguments[Range.StartAt(1)],
+            })
+            :
+            Duck.Implement<ICommandAndArguments>(new
+            {
+                Command = commandAndArguments[0],
+            });
+
+    private static ICommandAndArguments ValidateCommand(this ICommandAndArguments commandObject)
+    {
+        if (!ValidCommands.Contains(commandObject.Command))
+        {
+            commandObject.Message = "Unknown command.";
+        }
+
+        return commandObject;
+    }
 }

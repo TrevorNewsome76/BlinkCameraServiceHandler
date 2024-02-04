@@ -58,6 +58,7 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
             new
             {
                 Command = "foobar",
+                Message = "Unknown command."
             });
 
         //act
@@ -68,7 +69,30 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Test_CommandSplitMultipleCommand()
+    public void Test_CommandSplitMultipleArgumentsInvalidCommand()
+    {
+        //assign
+        string consoleCommand = "FOOBAR -eemailAddress -ppassword";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "foobar",
+            Arguments = new string[]
+            {
+                "eemailaddress",
+                "ppassword",
+            },
+            Message = "Unknown command."
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitMultipleArgumentsValidCommand()
     {
         //assign
         string consoleCommand = "LOGIN -eemailAddress -ppassword";
@@ -79,7 +103,7 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
             {
                 "eemailaddress",
                 "ppassword",
-            }
+            },
         });
 
         //act
