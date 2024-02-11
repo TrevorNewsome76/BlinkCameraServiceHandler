@@ -8,9 +8,10 @@ public class BlinkLibrary(IAdapter adapter)
 {
     private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
 
-    public string Login(string username, string password)
+    public string Login(string[] arguments)
     {
-        var loginResponse = adapter.Login(username,password);
+        var loginParameters = arguments.ExtractUsernameAndPassword();
+        var loginResponse = adapter.Login(loginParameters[0], loginParameters[1]);
         _sessionDetails = loginResponse.ConvertToSessionDetails();
 
         if (_sessionDetails.LoggedInStatus)
@@ -46,7 +47,8 @@ public class BlinkLibrary(IAdapter adapter)
     {
         if (_sessionDetails?.Account is not null && _sessionDetails.LoggedInStatus)
         {
-            var setPinResponse = adapter.VerifyPin(_sessionDetails.Account, arguments[0]);
+            var pinCode = arguments.ExtractPinCode();
+            var setPinResponse = adapter.VerifyPin(_sessionDetails.Account, pinCode);
             return setPinResponse.Message ?? string.Empty;
         }
         else

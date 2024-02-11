@@ -55,7 +55,7 @@ namespace BlinkCameraCall
                             break;
 
                         case "help":
-                            Console.WriteLine(blinkLibrary.Help(arguments));
+                            Console.WriteLine(blinkLibrary.Help(command.Arguments));
                             Console.WriteLine("PIN <code>       Verifies sms pin number sent after new login.");
                             Console.WriteLine("QUIT, EXIT       Exits program.");
                             Console.WriteLine("HELP             Provides Help information for Windows commands.");
