@@ -1,53 +1,51 @@
-﻿using BlinkCameraCall.Extensions;
-using BlinkCameraCall.Interfaces;
+﻿using BlinkCommon.Extensions;
+using BlinkCommon.Interfaces;
 using Dependency;
 using Shadow.Quack;
 
 namespace BlinkCameraCall;
 
-public class BlinkApiTransactions : IBlinkApiTransactions
+public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
 {
-    private const string BaseUrl = "https://stagingapi.enquirymax.net";
-    private IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
+    private static IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
 
-    public IBlinkSettings BlinkSettings { get; private set; }
+    private IBlinkSettings BlinkSettings { get; } = settings;
 
-    public BlinkApiTransactions(IBlinkSettings settings)
+    public bool SetAccessToken(string accessToken) =>
+        ApiDriver.SetAccessToken(accessToken);
+
+    public ILoginResponse? AuthLogin(string username, string password)
     {
-        BlinkSettings = settings;
-    }
-
-    public IAccessToken RetrieveAccessToken()
-    {
-        var parameters = new List<KeyValuePair<string, string>>();
-
-        parameters
-            .Add(new KeyValuePair<string, string>("clientId",
-                BlinkSettings.ClientId));
+        var parameters = new List<KeyValuePair<string, string>>
+        {
+            new("email",
+                BlinkSettings.Email),
+            new KeyValuePair<string, string>("password",
+                BlinkSettings.Password)
+        };
 
         var result =
+            ApiDriver
+                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v5/account/login",
+                    parameters);
+
+        return result?.Deserialize<ILoginResponse>() ?? Duck.Implement<ILoginResponse>();
+    }
+
+    public ILogoutResponse? AuthLogout(IAccount account)
+    {
+        var result =
             ApiDriver?
-                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/services/token",
-                    parameters) ?? string.Empty;
+                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v4/account/{account.Account_Id}/client/{account.Client_Id}/logout") ?? string.Empty;
 
-        var accessToken = result.Deserialize<IAccessToken>();
-        ApiDriver?.SetAccessToken(new KeyValuePair<string, string>("Bearer",
-            accessToken?.AccessToken ?? string.Empty));
-        return accessToken ?? Duck.Implement<IAccessToken>(new());
+        return result.Deserialize<ILogoutResponse>();
     }
 
-    public string? AuthLogin(IEnumerable<KeyValuePair<string, string>> parameters)
+    public IVerifyPinResponse AuthVerifyPin(IAccount account, string pinCode)
     {
-        throw new NotImplementedException();
-    }
-
-    public string? AuthLogout(IEnumerable<KeyValuePair<string, string>> parameters)
-    {
-        throw new NotImplementedException();
-    }
-
-    public string? AuthVerifyPin(IEnumerable<KeyValuePair<string, string>> parameters)
-    {
-        throw new NotImplementedException();
+        var baseString = $"https://rest-{account.Tier}.immedia-semi.com/api/v4/account/{account.Account_Id}/client/{account.Client_Id}/pin/verify";
+        var serializedPin = "{\"pin\":\"" +pinCode + "\"}";
+        var result = ApiDriver?.Post(baseString, serializedPin) ?? string.Empty;
+        return result.Deserialize<IVerifyPinResponse>();
     }
 }

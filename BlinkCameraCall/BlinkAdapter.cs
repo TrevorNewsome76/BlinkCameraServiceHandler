@@ -1,17 +1,15 @@
 ﻿using BlinkCameraCall.Driver;
-using System;
-using BlinkCameraCall.Interfaces;
+using BlinkCommon.Interfaces;
 using Dependency;
 
 namespace BlinkCameraCall;
 
-public class BlinkAdapter
+public class BlinkAdapter : IAdapter
 {
-    public static IAccessToken? AccessToken;
-
-    public static void Initialize(IBlinkSettings configuration)
+    public BlinkAdapter(IBlinkSettings configuration)
     {
-        Shelf.ShelveInstance(BlinkApiInterface.Initialize(configuration));
+        Shelf.Clear();
         Shelf.ShelveInstance(ApiDriver.HttpClientApiHandler());
+        Shelf.ShelveInstance(ApiInterface.Initialize(configuration));
     }
 }
