@@ -1,9 +1,6 @@
 ﻿using BlinkCameraCall;
 using BlinkCameraCall.Extensions;
-
 using FluentAssertions;
-using System.Runtime;
-
 using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests;
@@ -16,11 +13,11 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign
-        var mockAdapter = new MockAdapter(MockSettings.CreateSettings("/ufoo", "/pbar"));
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings("-ufoo", "-pBar"));
         var arguments = new string[]
         {
-            new string("/ufoo"),
-            new string("/pbar"),
+            new string("ufoo"),
+            new string("pBar"),
         };
         var expected = "Login to the Blink Service failed: Invalid credentials";
 
@@ -41,8 +38,8 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
         var arguments = new string[]
         {
-            new string("/ufoo"),
-            new string("/pbar"),
+            new string("utest@email.com"),
+            new string("pPAssword"),
         };
         var expected = "Login to the Blink Service successful.";
 
@@ -101,8 +98,8 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "Successfully logged out.";
         var arguments = new string[]
         {
-            new string("/utest@email.com"),
-            new string("/ppassword"),
+            new string("utest@email.com"),
+            new string("pPAssword"),
         };
 
         //act
@@ -151,9 +148,9 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "(1626) Client has been successfully verified";
         var arguments = new string[]
         {
-            new string("/utest@email.com"),
-            new string("/ppassword"),
-            new string("/v987654"),
+            new string("utest@email.com"),
+            new string("pPAssword"),
+            new string("v987654"),
         };
 
         //act
@@ -180,9 +177,9 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "(1621) Invalid PIN";
         var arguments = new string[]
         {
-            new string("/utest@email.com"),
-            new string("/ppassword"),
-            new string("/v123456"),
+            new string("utest@email.com"),
+            new string("pPAssword"),
+            new string("v123456"),
         };
 
         //act
@@ -209,9 +206,9 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "Not currently logged into Blink service.";
         var arguments = new string[]
         {
-            new string("/utest@email.com"),
-            new string("/ppassword"),
-            new string("/v987654"),
+            new string("utest@email.com"),
+            new string("pPAssword"),
+            new string("v987654"),
         };
 
         //act
@@ -231,9 +228,7 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "987654";
         var arguments = new[]
         {
-            new string("/utest@email.com"),
-            new string("/ppassword"),
-            new string("/v987654"),
+            new string("v987654"),
         };
 
         //act
@@ -253,8 +248,8 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var expected = "";
         var arguments = new[]
         {
-            new string("/utest@email.com"),
-            new string("/ppassword"),
+            new string("utest@email.com"),
+            new string("pPAssword"),
         };
 
         //act

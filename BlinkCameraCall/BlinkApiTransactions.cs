@@ -14,7 +14,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     public bool SetAccessToken(string accessToken) =>
         ApiDriver.SetAccessToken(accessToken);
 
-    public ILoginResponse? AuthLogin(string username, string password)
+    public ILoginResponse? AuthLogin()
     {
         var parameters = new List<KeyValuePair<string, string>>
         {
@@ -22,6 +22,24 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
                 BlinkSettings.Email),
             new KeyValuePair<string, string>("password",
                 BlinkSettings.Password)
+        };
+
+        var result =
+            ApiDriver
+                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v5/account/login",
+                    parameters);
+
+        return result?.Deserialize<ILoginResponse>() ?? Duck.Implement<ILoginResponse>();
+    }
+
+    public ILoginResponse? AuthLogin(string username, string password)
+    {
+        var parameters = new List<KeyValuePair<string, string>>
+        {
+            new("email",
+                username),
+            new KeyValuePair<string, string>("password",
+                password)
         };
 
         var result =

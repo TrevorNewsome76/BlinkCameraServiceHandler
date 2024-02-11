@@ -39,11 +39,11 @@ public static class AuthenticationExtension
 
         foreach (var argument in arguments)
         {
-            if (argument.Contains("/u") && argument.Length>2)
-                username = argument.Substring(2);
+            if (argument.StartsWith('u') && argument.Length>1)
+                username = argument.Substring(1);
 
-            if (argument.Contains("/p") && argument.Length > 2)
-                password = argument.Substring(2);
+            if (argument.StartsWith('p') && argument.Length > 1)
+                password = argument.Substring(1);
         }
 
         return
@@ -69,8 +69,8 @@ public static class AuthenticationExtension
 
         foreach (var argument in arguments)
         {
-            if (argument.Contains("/v") && argument.Length > 2)
-                pinCode = argument.Substring(2);
+            if (argument.StartsWith('v') && argument.Length > 1)
+                pinCode = argument.Substring(1);
         }
 
         return pinCode;

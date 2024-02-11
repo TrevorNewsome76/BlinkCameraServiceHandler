@@ -11,7 +11,7 @@ public static class SettingsFileExtension
         var fileSettings = Duck.Implement<IBlinkSettings>(new
         {
             Email = "test@email.com",
-            Password = "password",
+            Password = "PAssword",
             Baseurl = "https://rest-prod.immedia-semi.com"
         });
 
