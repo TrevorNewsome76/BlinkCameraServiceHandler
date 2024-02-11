@@ -8,6 +8,23 @@ public class BlinkLibrary(IAdapter adapter)
 {
     private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
 
+    public string Login()
+    {
+        var loginResponse = adapter.Login();
+
+        if (_sessionDetails.LoggedInStatus)
+        {
+            adapter.SetAccessToken(_sessionDetails.Auth?.Token ?? string.Empty);
+            _sessionDetails.LoggedInStatus = true;
+            return "Login to the Blink Service successful.";
+        }
+        else
+        {
+            _sessionDetails.LoggedInStatus = false;
+            return $"Login to the Blink Service failed: {loginResponse.Message}";
+        }
+    }
+
     public string Login(string[] arguments)
     {
         var loginParameters = arguments.ExtractUsernameAndPassword();

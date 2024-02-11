@@ -10,6 +10,9 @@ public static class AdapterExtension
         Shelf.RetrieveInstance<IApiTransactions>()
         ?? Duck.Implement<IApiTransactions>();
 
+    public static ILoginResponse Login(this IAdapter adapter) =>
+        Transactions.AuthLogin() ?? Duck.Implement<ILoginResponse>(new());
+
     public static ILoginResponse Login(this IAdapter adapter, string username, string password) =>
         Transactions.AuthLogin(username, password) ?? Duck.Implement<ILoginResponse>(new());
 

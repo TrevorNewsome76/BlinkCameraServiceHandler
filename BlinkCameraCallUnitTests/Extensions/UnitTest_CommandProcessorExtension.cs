@@ -4,8 +4,6 @@ using FluentAssertions;
 
 using Shadow.Quack;
 
-using System.Net.Mail;
-
 using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests.Extensions;
@@ -20,7 +18,7 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
         var expectedResult = Duck.Implement<ICommandAndArguments>(
             new
             {
-                ErrorMessage = "Null or empty command. Cannot process nothing.",
+                Message = "Null or empty command. Cannot process nothing.",
             });
         string consoleCommand = null!;
 
@@ -38,7 +36,7 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
         var expectedResult = Duck.Implement<ICommandAndArguments>(
             new
             {
-                ErrorMessage = "Null or empty command. Cannot process nothing.",
+                Message = "Null or empty command. Cannot process nothing.",
             });
         var consoleCommand = string.Empty;
 
@@ -57,7 +55,7 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
         var expectedResult = Duck.Implement<ICommandAndArguments>(
             new
             {
-                Command = "foobar",
+                Command = "FooBar",
                 Message = "Unknown command."
             });
 
@@ -72,14 +70,14 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
     public void Test_CommandSplitMultipleArgumentsInvalidCommand()
     {
         //assign
-        string consoleCommand = "FOOBAR -eemailAddress -ppassword";
+        string consoleCommand = "FOOBAR -eemailAddress -pPAssword";
         var expectedResult = Duck.Implement<ICommandAndArguments>(new
         {
-            Command = "foobar",
+            Command = "FOOBAR",
             Arguments = new string[]
             {
-                "eemailaddress",
-                "ppassword",
+                "eemailAddress",
+                "pPAssword",
             },
             Message = "Unknown command."
         });
@@ -95,14 +93,14 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
     public void Test_CommandSplitMultipleArgumentsValidCommand()
     {
         //assign
-        string consoleCommand = "LOGIN -eemailAddress -ppassword";
+        string consoleCommand = "LOGIN -eemailAddress -pPAssword";
         var expectedResult = Duck.Implement<ICommandAndArguments>(new
         {
-            Command = "login",
+            Command = "LOGIN",
             Arguments = new string[]
             {
-                "eemailaddress",
-                "ppassword",
+                "eemailAddress",
+                "pPAssword",
             },
         });
 

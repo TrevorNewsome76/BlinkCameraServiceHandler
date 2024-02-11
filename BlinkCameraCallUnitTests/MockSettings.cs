@@ -9,7 +9,7 @@ public class MockSettings
     {
         BaseUrl = "https://rest-prod.immedia-semi.com",
         Email = "test@email.com",
-        Password = "password",
+        Password = "PAssword",
     });
 
     public static IBlinkSettings CreateSettings(string email, string password) => Duck.Implement<IBlinkSettings>(new

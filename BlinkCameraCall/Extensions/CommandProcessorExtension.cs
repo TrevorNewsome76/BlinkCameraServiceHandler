@@ -10,7 +10,7 @@ public static class CommandProcessorExtension
     {
         "login",
         "logout",
-        "varifypin",
+        "verify",
         "exit",
     };
 
@@ -26,12 +26,12 @@ public static class CommandProcessorExtension
             return Duck.Implement<ICommandAndArguments>(
                 new
                 {
-                    ErrorMessage = "Null or empty command. Cannot process nothing.",
+                    Message = "Null or empty command. Cannot process nothing.",
                     Valid = false,
                 });
         }
 
-        return CreateReturnObject(consoleCommand.ToLower().Split(" -")).ValidateCommand();
+        return CreateReturnObject(consoleCommand.Split(" -")).ValidateCommand();
     }
 
     private static ICommandAndArguments CreateReturnObject(string[] commandAndArguments) =>
@@ -50,7 +50,7 @@ public static class CommandProcessorExtension
 
     private static ICommandAndArguments ValidateCommand(this ICommandAndArguments commandObject)
     {
-        if (!ValidCommands.Contains(commandObject.Command))
+        if (!ValidCommands.Contains(commandObject.Command.ToLower()))
         {
             commandObject.Message = "Unknown command.";
         }
