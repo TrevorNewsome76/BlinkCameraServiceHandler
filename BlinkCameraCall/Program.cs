@@ -59,7 +59,6 @@ namespace BlinkCameraCall
                             Console.WriteLine("PIN <code>       Verifies sms pin number sent after new login.");
                             Console.WriteLine("QUIT, EXIT       Exits program.");
                             Console.WriteLine("HELP             Provides Help information for Windows commands.");
-                            quitNow = true;
                             break;
 
                         default:
