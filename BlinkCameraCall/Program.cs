@@ -20,7 +20,7 @@ namespace BlinkCameraCall
             var settings = Duck.Implement<IBlinkSettings>(new());
             settings.Load($"{AppContext.BaseDirectory}");
 
-            Console.SetCursorPosition(0, 1);
+            //Console.SetCursorPosition(0, 1);
 
             
             var blinkLibrary = new BlinkLibrary(new BlinkAdapter(settings));
