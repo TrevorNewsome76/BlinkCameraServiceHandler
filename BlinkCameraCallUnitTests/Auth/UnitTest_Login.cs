@@ -1,8 +1,8 @@
 using BlinkCommon.Interfaces;
+using BlinkCommon.Interfaces.Auth;
 using Dependency;
 using FluentAssertions;
 using Shadow.Quack;
-using System.Runtime;
 
 using Xunit.Abstractions;
 

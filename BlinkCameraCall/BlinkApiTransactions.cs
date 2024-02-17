@@ -1,7 +1,16 @@
 ﻿using BlinkCommon.Extensions;
 using BlinkCommon.Interfaces;
-using Dependency;
+using BlinkCommon.Interfaces.Auth;
+using BlinkCommon.Interfaces.System;
 using Shadow.Quack;
+using Shadow.Quack.Json;
+
+using Dependency;
+using FluentAssertions.Equivalency;
+
+using Shadow.Quack;
+
+using System.Security.Principal;
 
 namespace BlinkCameraCall;
 
@@ -50,7 +59,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         return result?.Deserialize<ILoginResponse>() ?? Duck.Implement<ILoginResponse>();
     }
 
-    public ILogoutResponse? AuthLogout(IAccount account)
+    public ILogoutResponse? AuthLogout(IAuthAccount account)
     {
         var result =
             ApiDriver?
@@ -59,11 +68,18 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         return result.Deserialize<ILogoutResponse>();
     }
 
-    public IVerifyPinResponse AuthVerifyPin(IAccount account, string pinCode)
+    public IVerifyPinResponse? AuthVerifyPin(IAuthAccount account, string pinCode)
     {
         var baseString = $"https://rest-{account.Tier}.immedia-semi.com/api/v4/account/{account.Account_Id}/client/{account.Client_Id}/pin/verify";
         var serializedPin = "{\"pin\":\"" +pinCode + "\"}";
         var result = ApiDriver?.Post(baseString, serializedPin) ?? string.Empty;
         return result.Deserialize<IVerifyPinResponse>();
+    }
+
+    public IGetHomeScreenResponse? SystemGetHomeScreen(IAuthAccount account)
+    {
+        var baseString = $"https://rest-{account.Tier}.immedia-semi.com/api/v3/accounts/{account.Account_Id}/homescreen";
+        var result = ApiDriver?.Get(baseString) ?? string.Empty;
+        return Duck.Implement<IGetHomeScreenResponse>((JsonProxy)result);
     }
 }
