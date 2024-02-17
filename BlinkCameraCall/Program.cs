@@ -20,7 +20,7 @@ namespace BlinkCameraCall
             var settings = Duck.Implement<IBlinkSettings>(new());
             settings.Load($"{AppContext.BaseDirectory}");
 
-            Console.SetCursorPosition(0, 1);
+            //Console.SetCursorPosition(0, 1);
 
             
             var blinkLibrary = new BlinkLibrary(new BlinkAdapter(settings));
@@ -57,12 +57,17 @@ namespace BlinkCameraCall
                                 Console.WriteLine("Goodbye");
                                 quitNow = true;
                                 break;
-
+                            case "get":
+                                Console.WriteLine(blinkLibrary.Get(command.Arguments));
+                                break;
                             case "help":
                                 Console.WriteLine(blinkLibrary.Help(command.Arguments));
-                                Console.WriteLine("PIN <code>       Verifies sms pin number sent after new login.");
-                                Console.WriteLine("QUIT, EXIT       Exits program.");
-                                Console.WriteLine("HELP             Provides Help information for Windows commands.");
+                                Console.WriteLine("LOGIN -u<username> -p<password>  Logs into system.");
+                                Console.WriteLine("LOGOUT                           Logs out of the system.");
+                                Console.WriteLine("GET -i<homescreen>               Gets home system information.");
+                                Console.WriteLine("VERIFY -v<code>                     Verifies sms pin number sent after new login.");
+                                Console.WriteLine("QUIT, EXIT                       Exits program.");
+                                Console.WriteLine("HELP                             Provides Help information for Windows commands.");
                                 break;
 
                             default:

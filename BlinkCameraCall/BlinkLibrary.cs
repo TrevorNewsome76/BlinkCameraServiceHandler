@@ -1,5 +1,7 @@
 ﻿using BlinkCameraCall.Extensions;
 using BlinkCommon.Interfaces;
+using BlinkCommon.Interfaces.Auth;
+using BlinkCommon.Interfaces.System;
 using Shadow.Quack;
 
 namespace BlinkCameraCall;
@@ -49,8 +51,8 @@ public class BlinkLibrary(IAdapter adapter)
         if (_sessionDetails.LoggedInStatus)
         {
             _sessionDetails.LoggedInStatus = false;
-            ILogoutResponse logoutResult = 
-                adapter.Logout(_sessionDetails.Account ?? Duck.Implement<IAccount>(new()));
+            ILogoutResponse logoutResult =
+                adapter.Logout(_sessionDetails.Account ?? Duck.Implement<IAuthAccount>(new()));
 
             return logoutResult?.Message != null ? "Successfully logged out." : "FAILED to logout.";
         }
@@ -74,11 +76,42 @@ public class BlinkLibrary(IAdapter adapter)
 
     public string Help(string[] arguments)
     {
-        return new string("LOGIN            Logs into Blink account (using settings file." + System.Environment.NewLine +
-                          "PIN <code>       Verifies sms pin number sent after new login." + System.Environment.NewLine +
+        return new string("LOGIN            Logs into Blink account (using settings file." +
+                          System.Environment.NewLine +
+                          "VERIFY <code>       Verifies sms pin number sent after new login." +
+                          System.Environment.NewLine +
                           "QUIT, EXIT       Exits program." + System.Environment.NewLine +
-                          "HELP             Provides Help information for Windows commands." + System.Environment.NewLine
+                          "HELP             Provides Help information for Windows commands." +
+                          System.Environment.NewLine
         );
     }
 
+    public string Get(string[] arguments)
+    {
+        var getParameter = arguments.ExtractHomeScreenGetCommand();
+
+        if (_sessionDetails?.Account is not null && _sessionDetails.LoggedInStatus)
+        {
+
+            IGetHomeScreenResponse response = Duck.Implement<IGetHomeScreenResponse>(new());
+
+            switch (getParameter.ToLower())
+            {
+                case "home":
+                    response = adapter.GetHomeScreen(_sessionDetails.Account);
+                    break;
+                default: return "Unrecognised HomeSystem command";
+            }
+            _sessionDetails.Networks = response?.Networks;
+            _sessionDetails.SyncModules = response?.Sync_Modules;
+            _sessionDetails.Cameras = response?.Cameras;
+            _sessionDetails.Doorbells = response?.Doorbells;
+
+            return "Command ran successfully.";
+        }
+        else
+        {
+            return $"Not logged in to a system so this command cannot be used.";
+        }
+    }
 }

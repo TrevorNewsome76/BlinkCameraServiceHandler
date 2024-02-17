@@ -11,6 +11,8 @@ public static class CommandProcessorExtension
         "login",
         "logout",
         "verify",
+        "get",
+        "help",
         "exit",
     };
 

@@ -86,3 +86,6 @@ BlinkCameraCall/settings.json
 *.bin
 *.bin
 .vs/ProjectEvaluation/blinkcameracall.projects.v7.bin
+*.bin
+*.Up2Date
+*.bin

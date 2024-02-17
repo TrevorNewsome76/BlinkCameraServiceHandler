@@ -1,6 +1,6 @@
-﻿namespace BlinkCommon.Interfaces
+﻿namespace BlinkCommon.Interfaces.Auth
 {
-    public interface IUser
+    public interface IAuthUser
     {
         long User_Id { get; }
         string Country { get; }

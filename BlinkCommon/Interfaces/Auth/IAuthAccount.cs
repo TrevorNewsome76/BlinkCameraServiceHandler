@@ -1,6 +1,6 @@
-﻿namespace BlinkCommon.Interfaces;
+﻿namespace BlinkCommon.Interfaces.Auth;
 
-public interface IAccount
+public interface IAuthAccount
 {
     long Account_Id { get; }
     long User_Id { get; }

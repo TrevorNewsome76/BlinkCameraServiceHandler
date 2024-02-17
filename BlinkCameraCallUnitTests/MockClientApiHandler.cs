@@ -65,7 +65,15 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
     public string? Get(string Url)
     {
-        throw new NotImplementedException();
+        switch (Url)
+        {
+            case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
+                return MockData.CreateValidHomeScreenResponse().Serialize();
+                break;
+            default:
+                return MockData.AuthLogoutIncorrectResponse().Serialize();
+                break;
+        }
     }
 
     public void Dispose()

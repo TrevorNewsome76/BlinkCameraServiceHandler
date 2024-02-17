@@ -1,4 +1,5 @@
 ﻿using BlinkCommon.Interfaces;
+using BlinkCommon.Interfaces.Auth;
 using Shadow.Quack;
 
 namespace BlinkCameraCall.Extensions;
@@ -13,10 +14,10 @@ public static class AuthenticationExtension
     public static ISessionDetails ConvertToSessionDetails(this ILoginResponse? loginResponse) =>
         Duck.Implement<ISessionDetails>(new
         {
-            Account = loginResponse?.Account ?? Duck.Implement<IAccount>(new()),
+            Account = loginResponse?.Account ?? Duck.Implement<IAuthAccount>(new()),
             Auth = loginResponse?.Auth ?? Duck.Implement<IAuth>(new()),
-            Phone = loginResponse?.Phone ?? Duck.Implement<IPhone>(new()),
-            Verification = loginResponse?.Verification ?? Duck.Implement<IVerification>(new()),
+            Phone = loginResponse?.Phone ?? Duck.Implement<IAuthPhone>(new()),
+            Verification = loginResponse?.Verification ?? Duck.Implement<IAuthAuthVerification>(new()),
             Force_Password_Reset = loginResponse?.Force_Password_Reset ?? false,
             Allow_Pin_Resend_Seconds = loginResponse?.Allow_Pin_Resend_Seconds ?? 0,
             LoggedInStatus = !string.IsNullOrEmpty(loginResponse?.Auth?.Token ?? string.Empty),
@@ -73,6 +74,9 @@ public static class AuthenticationExtension
                 pinCode = argument.Substring(1);
         }
 
-        return pinCode;
+        return string.IsNullOrEmpty(pinCode)
+            ? throw new ArgumentException(
+                "Pin code not supplied. Use /v<pincode> Verify command.")
+            : pinCode;
     }
 }

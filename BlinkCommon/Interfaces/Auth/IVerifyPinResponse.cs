@@ -1,4 +1,4 @@
-﻿namespace BlinkCommon.Interfaces;
+﻿namespace BlinkCommon.Interfaces.Auth;
 
 public interface IVerifyPinResponse
 {

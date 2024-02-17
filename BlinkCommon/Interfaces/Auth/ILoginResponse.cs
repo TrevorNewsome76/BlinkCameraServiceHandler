@@ -1,11 +1,11 @@
-﻿namespace BlinkCommon.Interfaces;
+﻿namespace BlinkCommon.Interfaces.Auth;
 
 public interface ILoginResponse
 {
-    IAccount? Account { get; set; }
+    IAuthAccount? Account { get; set; }
     IAuth? Auth { get; }
-    IPhone? Phone { get; }
-    IVerification? Verification { get; }
+    IAuthPhone? Phone { get; }
+    IAuthAuthVerification? Verification { get; }
     int Lockout_Time_Remaining { get; }
     bool Force_Password_Reset { get; }
     int Allow_Pin_Resend_Seconds { get; }
