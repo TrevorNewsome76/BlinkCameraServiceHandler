@@ -174,6 +174,7 @@ following `IMAGE` command.
 |---|---|
 | `New image captured for '<name>'. Run IMAGE -n<name> to download it.` | Success — the device took a fresh picture. |
 | `Blink did not finish capturing a new image for '<name>' in time.` | Blink never confirmed completion within the timeout. Try again. |
+| `Error: Blink rejected the request: <raw response>` | Blink refused to even start the capture (busy, offline, expired token, etc). The raw response is included for debugging. |
 
 Same `Not currently logged into Blink service.` / `Run MAP or GET first...` /
 "not found" messages as `DEVICE` apply here too.
@@ -188,6 +189,7 @@ to the executable, named `<DeviceName>_<timestamp>.jpg`.
 |---|---|
 | `Saved image to <path>.` | Success. |
 | `'<name>' has no image yet — run SNAP -n<name> first.` | The device has never had a thumbnail captured. |
+| `Blink did not return an image for '<name>'.` | The download itself failed (bad/expired URL, Blink-side error). Try SNAP then IMAGE again. |
 
 ## Cloud video clips (`VIDEOS` / `DOWNLOAD`)
 
@@ -200,6 +202,7 @@ account (default lookback: 24 hours), numbered so you can pick one.
 |---|---|
 | `No cloud video events in the last <hours> hours.` | Nothing recorded in that window. |
 | `Run VIDEOS first, or '<id>' wasn't in the last VIDEOS list.` | `DOWNLOAD` was run without a matching `VIDEOS` call first, or with a stale/wrong id. |
+| `Blink did not return a clip for '<id>'.` | The download itself failed (bad/expired URL, Blink-side error). Run `VIDEOS` again and retry. |
 
 Note: the exact shape of Blink's cloud-media response was reconstructed
 from a third-party open-source client rather than confirmed live, so these
@@ -222,7 +225,10 @@ after a session restart.
 | `No clips on '<name>''s SD card.` | The card is empty. |
 | `Run LOCALCLIPS -n<syncmodule> first.` | `LOCALDOWNLOAD` was run before `LOCALCLIPS` for that sync module, or the cached manifest is for a different one. |
 | `'<id>' wasn't in the last LOCALCLIPS list for '<name>'.` | The clip id wasn't in that sync module's last listed manifest. |
+| `Blink did not finish reading the SD-card manifest for '<name>' in time.` | `LOCALCLIPS` never got a ready manifest within the timeout. Try again. |
 | `Blink did not finish preparing the clip for '<name>' in time.` | Blink never finished pulling the clip off the card within the timeout. Try again. |
+| `Blink did not return the clip for '<name>'.` | The download itself failed after Blink finished preparing it. Try again. |
+| `Error: Blink rejected the request: <raw response>` | Blink refused to even start the manifest read or clip prepare (busy, offline, expired token, etc). The raw response is included for debugging. |
 
 Clips are **not** deleted from the SD card after downloading — use the
 Blink app if you want to free up card space.

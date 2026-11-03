@@ -326,13 +326,29 @@ for every "do a thing on the physical device" operation in this API:
    device's cached `Thumbnail` field is current for a following `IMAGE`.
 
 `CommandPolling` takes `IApiMethods` and the poll URL directly rather than
-reading from `Shelf` itself, so its three unit tests
+reading from `Shelf` itself, so its unit tests
 (`UnitTest_CommandPolling`) run against a hand-rolled fake with an injected
 `TimeSpan.Zero` poll interval — the real default is a genuine 1-second
 sleep, which would make a timeout test take two minutes if not overridden.
 For that reason `Snap` (and every other command that polls — `LocalClips`,
 `LocalDownload`) exposes optional `pollInterval`/`maxRetries` parameters
 that default to the production values; `Program.cs` never passes them.
+
+**Two failure modes the final review caught and this now handles
+explicitly, both found by a Blink-rejection fixture that returns a POST
+body with no command id:**
+- If the trigger/prepare/manifest-request `POST` itself comes back with no
+  usable id (Blink refused outright — busy, offline device, expired token),
+  `ApiTransactions` throws `InvalidOperationException("Blink rejected the
+  request: <raw body>")` immediately, rather than polling a nonexistent
+  command for the full two minutes and reporting a misleading timeout.
+  `Program.cs`'s top-level catch surfaces this as `Error: Blink rejected
+  the request: ...`.
+- `CommandPolling` also checks `ICommandStatusResponse.Status_Code`: a
+  non-`908` value while `complete: false` is treated as an immediate
+  failure (returns `null`, same as a timeout), not as "still pending" —
+  otherwise a command Blink already failed would either burn the full
+  retry budget or, worse, eventually be read as success.
 
 ### 7.4 The `IMAGE` command
 
@@ -353,6 +369,21 @@ absolute is left alone — the same technique as `urljoin` in blinkpy.
 interface alongside the existing text-returning `Get`) through
 `IApiTransactions.DownloadBytes`, and writes the result via
 `MediaFileExtension.SaveMediaFile`.
+
+`HttpClientApiHandler.GetBytes` checks `response.IsSuccessStatusCode` and
+returns `null` on anything but a 2xx — the final review caught that it
+originally didn't, which meant a 404/401 error body got written straight
+to disk as a `.jpg`/`.mp4` and reported as `Saved image to ...`. Verifying
+this needed `HttpClientApiHandler` to go from `internal` to `public` (no
+`InternalsVisibleTo` exists in this repo), since the test uses its existing
+`HttpMessageHandler`-injecting constructor with a fake handler rather than
+the usual `MockHttpClientApiHandler` substitution.
+
+`SNAP` and `IMAGE` resolve a name to a camera *or* doorbell, never both:
+`BlinkLibrary.ResolveCameraOrDoorbell` looks up both lists and treats a name
+that matches one of each the same as a name that matches neither (ambiguous
+= not found), rather than the camera silently winning. `DEVICE` is
+deliberately exempt — its spec explicitly resolves camera-first.
 
 ### 7.5 `VIDEOS` and `DOWNLOAD` (cloud clips)
 
