@@ -69,12 +69,40 @@ namespace BlinkCameraCall
                             case "map":
                                 Console.WriteLine(blinkLibrary.Map());
                                 break;
+                            case "device":
+                                Console.WriteLine(blinkLibrary.Device(command.Arguments));
+                                break;
+                            case "snap":
+                                Console.WriteLine(blinkLibrary.Snap(command.Arguments));
+                                break;
+                            case "image":
+                                Console.WriteLine(blinkLibrary.Image(command.Arguments));
+                                break;
+                            case "videos":
+                                Console.WriteLine(blinkLibrary.Videos(command.Arguments));
+                                break;
+                            case "download":
+                                Console.WriteLine(blinkLibrary.Download(command.Arguments));
+                                break;
+                            case "localclips":
+                                Console.WriteLine(blinkLibrary.LocalClips(command.Arguments));
+                                break;
+                            case "localdownload":
+                                Console.WriteLine(blinkLibrary.LocalDownload(command.Arguments));
+                                break;
                             case "help":
                                 Console.WriteLine(blinkLibrary.Help(command.Arguments));
                                 Console.WriteLine("LOGIN -u<username> -p<password>  Logs into system.");
                                 Console.WriteLine("LOGOUT                           Logs out of the system.");
                                 Console.WriteLine("GET -i<homescreen>               Gets home system information.");
                                 Console.WriteLine("MAP                              Shows a tree of networks, sync modules, cameras and doorbells.");
+                                Console.WriteLine("DEVICE -n<name>                  Shows detailed info for one camera/doorbell.");
+                                Console.WriteLine("SNAP -n<name>                    Triggers a fresh snapshot for a camera/doorbell.");
+                                Console.WriteLine("IMAGE -n<name>                   Downloads a device's current thumbnail to media/.");
+                                Console.WriteLine("VIDEOS -h<hours>                 Lists recent cloud video events (default 24h).");
+                                Console.WriteLine("DOWNLOAD -i<id>                  Downloads a cloud clip (id from VIDEOS) to media/.");
+                                Console.WriteLine("LOCALCLIPS -n<syncmodule>        Lists a sync module's SD-card manifest.");
+                                Console.WriteLine("LOCALDOWNLOAD -i<id> -n<sync>    Downloads an SD-card clip (id from LOCALCLIPS) to media/.");
                                 Console.WriteLine("VERIFY -v<code>                     Verifies sms pin number sent after new login.");
                                 Console.WriteLine("QUIT, EXIT                       Exits program.");
                                 Console.WriteLine("HELP                             Provides Help information for Windows commands.");

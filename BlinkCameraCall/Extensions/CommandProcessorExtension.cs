@@ -13,6 +13,13 @@ public static class CommandProcessorExtension
         "verify",
         "get",
         "map",
+        "device",
+        "snap",
+        "image",
+        "videos",
+        "download",
+        "localclips",
+        "localdownload",
         "help",
         "exit",
     };

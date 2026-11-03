@@ -4,7 +4,9 @@ BlinkCameraServiceHandler is a Windows console application for logging into a
 personal [Blink](https://blinkforhome.com/) home-security account and running a
 small set of commands against it: login (including two-factor codes), logout,
 client-trust PIN verification, fetching your "home screen" (networks, sync
-modules, cameras, doorbells), and printing a readable device map.
+modules, cameras, doorbells), printing a readable device map, inspecting a
+single device, triggering and downloading fresh snapshots, and listing/
+downloading cloud and SD-card video clips.
 
 If you want to know *how* it works instead of how to use it, see
 [DEVELOPER.md](DEVELOPER.md).
@@ -68,6 +70,13 @@ Type commands at the prompt, one per line, and press Enter.
 | Verify a code | `VERIFY -v<code>` | Enters a verification code. Does one of two things depending on what just happened (see "Two-factor logins" below): completes a pending two-factor login, or verifies an old-style client-trust PIN. |
 | Get home screen info | `GET -ihome` | Fetches your account's networks, sync modules, cameras and doorbells. Requires being logged in first. |
 | Show a device map | `MAP` | Fetches the same data as `GET -ihome` and prints it as a readable tree: each network, with its sync module, cameras and doorbells nested underneath, each showing online/armed/enabled status, battery, wifi signal and firmware version. Requires being logged in first. |
+| Single device detail | `DEVICE -n<name>` | Shows a detailed view of one camera or doorbell, using data already fetched by `MAP`/`GET`. |
+| Trigger a snapshot | `SNAP -n<name>` | Asks the camera/doorbell to capture a fresh still image, and waits (up to ~2 minutes) until it's ready. |
+| Download a thumbnail | `IMAGE -n<name>` | Downloads the device's current thumbnail to `media/` as a `.jpg`. |
+| List cloud video events | `VIDEOS [-h<hours>]` | Lists recent cloud-recorded clips account-wide (default: last 24 hours). |
+| Download a cloud clip | `DOWNLOAD -i<id>` | Downloads a cloud clip (by id from the last `VIDEOS` list) to `media/` as a `.mp4`. |
+| List an SD card's clips | `LOCALCLIPS -n<syncmodule>` | Requests and lists the SD-card manifest for a sync module (takes a few seconds). |
+| Download an SD-card clip | `LOCALDOWNLOAD -i<id> -n<syncmodule>` | Downloads one SD-card clip (by id from the last `LOCALCLIPS` list for that sync module) to `media/`. |
 | Logout | `LOGOUT` | Logs out of the current session. |
 | Help | `HELP` | Prints command help. |
 | Quit | `QUIT` or `EXIT` | Exits the program. |
@@ -92,6 +101,30 @@ Network: Home (armed)
   Sync Module: My Blink Sync Module  [online, fw 16.0.8, wifi 5]
   Camera: Front Door  [enabled, status done, battery ok, wifi 5]
 
+DEVICE -nFront Door
+Camera: Front Door
+  Network:        Home (armed)
+  Status:         done
+  Enabled:        true
+  Battery:        ok
+  Wifi signal:    5
+  Firmware:       16.0.8
+  Serial:         ABC123
+  Local storage:  disabled, compatible
+  Thumbnail:      none yet (run SNAP to capture one)
+
+SNAP -nFront Door
+New image captured for 'Front Door'. Run IMAGE -nFront Door to download it.
+
+IMAGE -nFront Door
+Saved image to media\Front_Door_20261103_143000.jpg.
+
+VIDEOS -h48
+[1] Id 2001  Device: Front Door  Recorded: 2026-11-02 09:00:00 UTC
+
+DOWNLOAD -i2001
+Saved video to media\Front_Door_20261103_143512.mp4.
+
 LOGOUT
 Successfully logged out.
 
@@ -114,6 +147,85 @@ listed individually.
 
 If you're not logged in, `MAP` gives the same `Not currently logged into
 Blink service.` message as `VERIFY`/`GET`/`LOGOUT`.
+
+## Single device detail (`DEVICE`)
+
+`DEVICE -n<name>` prints a detailed view of one camera or doorbell: network,
+status, enabled/battery/wifi, firmware, serial, local-storage support, and
+(for doorbells) doorbell mode. The name must match exactly what `MAP` shows
+(case-insensitive). It uses data already fetched by `MAP`/`GET` this
+session — it never calls Blink itself, so run `MAP` or `GET -ihome` first.
+
+| Message | What it means |
+|---|---|
+| `Not currently logged into Blink service.` | Log in first. |
+| `Run MAP or GET first to load your devices.` | You're logged in, but haven't fetched your device list yet this session. |
+| `No single device named '<name>' was found. Run MAP to see exact names.` | The name didn't match exactly one camera/doorbell. |
+
+## Triggering a fresh snapshot (`SNAP`)
+
+`SNAP -n<name>` asks the named camera or doorbell to capture a brand-new
+still image, waiting for Blink to confirm it's ready (up to about two
+minutes — this is a real device operation, not instant). On success it
+refreshes your cached device list so the new thumbnail is picked up by a
+following `IMAGE` command.
+
+| Message | What it means |
+|---|---|
+| `New image captured for '<name>'. Run IMAGE -n<name> to download it.` | Success — the device took a fresh picture. |
+| `Blink did not finish capturing a new image for '<name>' in time.` | Blink never confirmed completion within the timeout. Try again. |
+
+Same `Not currently logged into Blink service.` / `Run MAP or GET first...` /
+"not found" messages as `DEVICE` apply here too.
+
+## Downloading a thumbnail (`IMAGE`)
+
+`IMAGE -n<name>` downloads the device's *current* thumbnail (not a new one —
+run `SNAP` first if you want the latest) to a `media/` folder created next
+to the executable, named `<DeviceName>_<timestamp>.jpg`.
+
+| Message | What it means |
+|---|---|
+| `Saved image to <path>.` | Success. |
+| `'<name>' has no image yet — run SNAP -n<name> first.` | The device has never had a thumbnail captured. |
+
+## Cloud video clips (`VIDEOS` / `DOWNLOAD`)
+
+`VIDEOS [-h<hours>]` lists recent cloud-recorded clips across your whole
+account (default lookback: 24 hours), numbered so you can pick one.
+`DOWNLOAD -i<id>` downloads the clip with that id — from the *most recent*
+`VIDEOS` call — to `media/` as a `.mp4`.
+
+| Message | What it means |
+|---|---|
+| `No cloud video events in the last <hours> hours.` | Nothing recorded in that window. |
+| `Run VIDEOS first, or '<id>' wasn't in the last VIDEOS list.` | `DOWNLOAD` was run without a matching `VIDEOS` call first, or with a stale/wrong id. |
+
+Note: the exact shape of Blink's cloud-media response was reconstructed
+from a third-party open-source client rather than confirmed live, so these
+two commands are the most likely in this release to need a fix after
+real-world use — see [DEVELOPER.md](DEVELOPER.md) if that happens.
+
+## SD-card video clips (`LOCALCLIPS` / `LOCALDOWNLOAD`)
+
+If a Sync Module has an SD card with local storage enabled, `LOCALCLIPS
+-n<syncmodule>` asks Blink to read the card's manifest (this takes a few
+seconds — Blink has to go read the card) and lists the clips on it.
+`LOCALDOWNLOAD -i<id> -n<syncmodule>` then downloads one of those clips to
+`media/` — you must run `LOCALCLIPS` for that same sync module first in
+this session; its clip ids aren't valid across different sync modules or
+after a session restart.
+
+| Message | What it means |
+|---|---|
+| `'<name>' doesn't have active local storage.` | That sync module has no SD card, or it isn't active. |
+| `No clips on '<name>''s SD card.` | The card is empty. |
+| `Run LOCALCLIPS -n<syncmodule> first.` | `LOCALDOWNLOAD` was run before `LOCALCLIPS` for that sync module, or the cached manifest is for a different one. |
+| `'<id>' wasn't in the last LOCALCLIPS list for '<name>'.` | The clip id wasn't in that sync module's last listed manifest. |
+| `Blink did not finish preparing the clip for '<name>' in time.` | Blink never finished pulling the clip off the card within the timeout. Try again. |
+
+Clips are **not** deleted from the SD card after downloading — use the
+Blink app if you want to free up card space.
 
 ## Two-factor logins
 

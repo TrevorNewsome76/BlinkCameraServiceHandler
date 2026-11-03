@@ -302,6 +302,108 @@ Two things worth knowing if you touch this again:
   listing each one - deliberately, to avoid implying a Mini-only account has "no
   cameras" while still not overstating what's actually modeled.
 
+### 7.2 The `DEVICE` command
+
+`BlinkLibrary.Device` does not call Blink at all — it looks up a camera or
+doorbell by name (`DeviceLookupExtension.FindCameraByName`/
+`FindDoorbellByName`, case-insensitive, `null` on zero or 2+ matches) in
+whatever `_sessionDetails` already holds from the last `MAP`/`GET`, resolves
+its network from `_sessionDetails.Networks`, and formats both with
+`DeviceDetailExtension.ToDeviceDetailString` — a pure function in the same
+style as `DeviceMapExtension.ToDeviceMapString` (§7.1).
+
+### 7.3 The `SNAP` command
+
+Triggering a fresh snapshot is Blink's standard async-command pattern, used
+for every "do a thing on the physical device" operation in this API:
+
+1. `POST` with no body to a camera- or doorbell-specific `.../thumbnail` path
+   (`ApiTransactions.SystemTriggerCameraSnapshot`/`SystemTriggerDoorbellSnapshot`).
+2. The response carries a command id; poll `GET /network/{id}/command/{id}`
+   once a second for up to 120 attempts until Blink reports `complete: true`
+   (`BlinkCameraCall/Driver/CommandPolling.cs`, `WaitForCommandComplete`).
+3. On success, `BlinkLibrary.Snap` re-fetches the home screen so the
+   device's cached `Thumbnail` field is current for a following `IMAGE`.
+
+`CommandPolling` takes `IApiMethods` and the poll URL directly rather than
+reading from `Shelf` itself, so its three unit tests
+(`UnitTest_CommandPolling`) run against a hand-rolled fake with an injected
+`TimeSpan.Zero` poll interval — the real default is a genuine 1-second
+sleep, which would make a timeout test take two minutes if not overridden.
+For that reason `Snap` (and every other command that polls — `LocalClips`,
+`LocalDownload`) exposes optional `pollInterval`/`maxRetries` parameters
+that default to the production values; `Program.cs` never passes them.
+
+### 7.4 The `IMAGE` command
+
+A device's thumbnail reference comes in one of two shapes, mirrored from
+blinkpy (the reference OSS client) because this project's own testing never
+saw the live response directly:
+
+- A bare integer (the new API) — build a fixed-shape URL from it:
+  `/api/v3/media/accounts/{account}/networks/{network}/{camera|doorbell}/{id}/thumbnail/thumbnail.jpg?ts={value}&ext=`.
+- Any other string (the old API) — append `.jpg`, unless it already ends
+  `&ext=`.
+
+`ThumbnailUrlExtension.BuildThumbnailUrl` is a pure function covering both
+cases, resolving the result against the tier base URL via `System.Uri`'s
+relative-URI combining (not string concatenation) so a value that's already
+absolute is left alone — the same technique as `urljoin` in blinkpy.
+`BlinkLibrary.Image` then calls `IApiMethods.GetBytes` (added to that
+interface alongside the existing text-returning `Get`) through
+`IApiTransactions.DownloadBytes`, and writes the result via
+`MediaFileExtension.SaveMediaFile`.
+
+### 7.5 `VIDEOS` and `DOWNLOAD` (cloud clips)
+
+`VIDEOS` calls `GET /api/v1/accounts/{account}/media/changed?since={iso8601}&page=1`
+and caches the (non-deleted) result on `BlinkLibrary._lastCloudMedia`;
+`DOWNLOAD -i<id>` looks the id up in that cache and downloads
+`{tier-base}{item.Media}` via the same `DownloadBytes` path as `IMAGE`.
+
+**This is the one area of this release least likely to be exactly right.**
+The `media/changed` response's field names (`ICloudMediaItem`'s `Id`,
+`Device_Name`, `Media`, `Deleted`, etc.) are a best-effort reconstruction —
+none of the source material read for this feature actually parsed that
+response's JSON, only referenced the endpoint and the general shape of
+"a list of recent media items." Treat a `VIDEOS`/`DOWNLOAD` failure against
+a real account the same way the OAuth rewrite treated login failures: the
+error message includes Blink's raw response, which is the fastest way to
+find and fix a field-name mismatch.
+
+### 7.6 `LOCALCLIPS` and `LOCALDOWNLOAD` (SD-card clips)
+
+Reading a Sync Module's SD card is a three-step dance, because Blink has to
+actually ask the physical Sync Module to read the card over its own
+connection before any of this data exists server-side:
+
+1. `LOCALCLIPS -n<syncmodule>` `POST`s a manifest request, gets back a
+   request id, then polls `GET .../manifest/request/{request_id}` — not for
+   a `complete` flag like `CommandPolling`, but for a `clips` array to
+   appear in the response. This has its own tiny poller,
+   `BlinkCameraCall/Driver/ManifestPolling.cs`, with the same
+   injectable-interval shape as `CommandPolling` for the same testing
+   reason. The result (sync module id, manifest id, and the clip list) is
+   cached on `BlinkLibrary._lastLocalManifest`.
+2. `LOCALDOWNLOAD -i<id> -n<syncmodule>` checks the cached manifest belongs
+   to the *named* sync module (not just any previously-cached manifest —
+   this is the one input class worth testing deliberately, since switching
+   sync modules between `LOCALCLIPS` calls is an easy way to end up
+   downloading against a stale manifest by accident) and that the clip id
+   was actually in it.
+3. The clip's URL is unusual: the **same** URL
+   (`IApiTransactions.BuildLocalStorageClipUrl`, a fixed template keyed by
+   account/network/sync-module/manifest/clip id) is first `POST`ed (which
+   tells the Sync Module to pull that clip off the card into a
+   cloud-accessible buffer — polled with `CommandPolling`, same as `SNAP`)
+   and then `GET`ed for the actual bytes. There is no separate "download"
+   URL.
+
+Deliberately **not** implemented: the delete-from-card step blinkpy's own
+local-storage flow has after downloading. Silently deleting footage off
+someone's physical SD card by default is a worse failure mode than making
+them delete it from the Blink app if they want the space back.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per
@@ -368,7 +470,18 @@ or deliberately decide to still skip:
   `Cameras`/`Doorbells`/`Sync_Modules` are. `MAP` (§7.1) shows them only as a bare
   count rather than pretending to detail them. Blink Mini cameras (`Owls`) are the
   one case worth modeling properly first, since they're actual cameras a user would
-  expect to see individually, not an accessory.
+  expect to see individually, not an accessory. This also means `DEVICE`, `SNAP`,
+  `IMAGE`, `LOCALCLIPS` and `LOCALDOWNLOAD` (§7.2-7.6) can't address them either —
+  they only look up cameras, doorbells, and sync modules.
+- **No liveview (live video streaming).** Blink's liveview endpoint returns an
+  `immis://`-style stream URL, not a downloadable file; a console app has nothing
+  to point that at. `SNAP`/`IMAGE` give you a still image instead.
+- **No delete-from-SD-card step after `LOCALDOWNLOAD`** (§7.6) — a deliberate
+  omission, not an oversight. blinkpy's own local-storage flow has an optional
+  delete-after-download step; this project leaves clips on the card.
+- **The `media/changed` response shape behind `VIDEOS`/`DOWNLOAD` (§7.5) is a
+  reconstruction, not a confirmed live response.** Expect it to need the same
+  live-error-driven field-name fix the OAuth rewrite needed for login.
 
 ## 11. If you had to rebuild this from scratch, in order
 
