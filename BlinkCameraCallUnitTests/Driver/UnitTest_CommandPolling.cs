@@ -30,6 +30,7 @@ public class UnitTest_CommandPolling
 
     private const string Incomplete = "{\"id\":1,\"network_id\":2,\"complete\":false,\"status_code\":908}";
     private const string Complete = "{\"id\":1,\"network_id\":2,\"complete\":true,\"status_code\":908}";
+    private const string Failed = "{\"id\":1,\"network_id\":2,\"complete\":false,\"status_code\":200}";
 
     [Fact]
     public void Test_WaitForCommandComplete_CompletesOnFirstPoll()
@@ -59,5 +60,16 @@ public class UnitTest_CommandPolling
         var result = CommandPolling.WaitForCommandComplete(api, "http://example/command/1", TimeSpan.Zero, 3);
 
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public void Test_WaitForCommandComplete_NonSuccessStatusCode_ReturnsNullImmediately()
+    {
+        var api = new FakeApiMethods(Failed);
+
+        var result = CommandPolling.WaitForCommandComplete(api, "http://example/command/1", TimeSpan.Zero, 120);
+
+        result.Should().BeNull();
+        api.CallCount.Should().Be(1);
     }
 }

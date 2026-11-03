@@ -106,6 +106,14 @@ public class BlinkLibrary(IAdapter adapter)
         return response is null ? "No devices found." : response.ToDeviceMapString();
     }
 
+    private (IHomeScreenCamera? Camera, IHomeScreenDoorbells? Doorbell) ResolveCameraOrDoorbell(string name)
+    {
+        var camera = _sessionDetails.FindCameraByName(name);
+        var doorbell = _sessionDetails.FindDoorbellByName(name);
+
+        return camera is not null && doorbell is not null ? (null, null) : (camera, doorbell);
+    }
+
     public string Snap(string[] arguments, TimeSpan? pollInterval = null, int maxRetries = 120)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
@@ -115,8 +123,7 @@ public class BlinkLibrary(IAdapter adapter)
             return "Run MAP or GET first to load your devices.";
 
         var name = arguments.ExtractDeviceName();
-        var camera = _sessionDetails.FindCameraByName(name);
-        var doorbell = camera is null ? _sessionDetails.FindDoorbellByName(name) : null;
+        var (camera, doorbell) = ResolveCameraOrDoorbell(name);
 
         if (camera is null && doorbell is null)
             return $"No single device named '{name}' was found. Run MAP to see exact names.";
@@ -170,8 +177,7 @@ public class BlinkLibrary(IAdapter adapter)
             return "Run MAP or GET first to load your devices.";
 
         var name = arguments.ExtractDeviceName();
-        var camera = _sessionDetails.FindCameraByName(name);
-        var doorbell = camera is null ? _sessionDetails.FindDoorbellByName(name) : null;
+        var (camera, doorbell) = ResolveCameraOrDoorbell(name);
 
         if (camera is null && doorbell is null)
             return $"No single device named '{name}' was found. Run MAP to see exact names.";

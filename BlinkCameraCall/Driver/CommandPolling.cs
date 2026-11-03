@@ -21,6 +21,9 @@ public static class CommandPolling
             if (status.Complete)
                 return status;
 
+            if (status.Status_Code != 0 && status.Status_Code != 908)
+                return null;
+
             Thread.Sleep(interval);
         }
 

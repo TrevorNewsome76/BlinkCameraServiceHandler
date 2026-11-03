@@ -49,6 +49,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":500,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/camera/321380/thumbnail":
                 return "{\"id\":501,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/1/camera/10/thumbnail":
+                return "{\"message\":\"system busy\"}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/request":
                 return "{\"id\":600}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/502/local_storage/manifest/request":
@@ -57,6 +59,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":602}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/request":
                 return "{\"id\":603}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/505/local_storage/manifest/request":
+                return "{\"message\":\"system busy\"}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/506/local_storage/manifest/request":
+                return "{\"id\":604}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/506/local_storage/manifest/703/clip/request/4":
+                return "{\"message\":\"system busy\"}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/700/clip/request/1":
                 return "{\"id\":900}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/702/clip/request/2":
@@ -89,6 +97,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":602}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/request/603":
                 return "{\"manifest_id\":702,\"clips\":[{\"id\":2,\"camera_name\":\"Garage\",\"created_at\":\"2026-11-01T14:00:00+00:00\",\"size\":9999}]}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/506/local_storage/manifest/request/604":
+                return "{\"manifest_id\":703,\"clips\":[{\"id\":4,\"camera_name\":\"Pergoda\",\"created_at\":\"2026-11-01T15:00:00+00:00\",\"size\":1111}]}";
             case "https://rest-007.immedia-semi.com/network/1/command/900":
                 return "{\"id\":900,\"network_id\":1,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/1/command/801":

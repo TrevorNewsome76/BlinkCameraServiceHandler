@@ -122,6 +122,41 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_SnapFailedCameraAndDoorbellShareName()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "No single device named 'Shared Name Device' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Snap(new[] { "nShared Name Device" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_SnapFailedBlinkRejected()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var act = () => blinkLib.Snap(new[] { "nRejected Snap Cam" });
+
+        //assert
+        act.Should().Throw<InvalidOperationException>().WithMessage("*system busy*");
+    }
+
+    [Fact]
     public void Test_SnapTimedOut()
     {
         //assign
@@ -288,6 +323,24 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
 
         //act
         var actualResult = blinkLib.Image(new[] { "nNoThumbCam" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_ImageFailedCameraAndDoorbellShareName()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "No single device named 'Shared Name Device' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Image(new[] { "nShared Name Device" });
 
         //assert
         actualResult.Should().BeEquivalentTo(expected);
@@ -549,6 +602,41 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
 
         //assert
         actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsFailedBlinkRejected()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var act = () => blinkLib.LocalClips(new[] { "nRejected Manifest Sync" });
+
+        //assert
+        act.Should().Throw<InvalidOperationException>().WithMessage("*system busy*");
+    }
+
+    [Fact]
+    public void Test_LocalDownloadFailedBlinkRejected()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalClips(new[] { "nReject Prepare Sync" });
+
+        //act
+        var act = () => blinkLib.LocalDownload(new[] { "nReject Prepare Sync", "i4" });
+
+        //assert
+        act.Should().Throw<InvalidOperationException>().WithMessage("*system busy*");
     }
 
     [Fact]

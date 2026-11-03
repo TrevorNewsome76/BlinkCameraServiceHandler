@@ -113,8 +113,13 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     public IManifestRequestResponse? SystemRequestLocalStorageManifest(IAuthAccount account, long networkId, long syncModuleId)
     {
         var url = $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/sync_modules/{syncModuleId}/local_storage/manifest/request";
-        var result = ApiDriver?.Post(url) ?? string.Empty;
-        return result.Deserialize<IManifestRequestResponse>();
+        var raw = ApiDriver?.Post(url) ?? string.Empty;
+        var result = raw.Deserialize<IManifestRequestResponse>();
+
+        if (result.Id == 0)
+            throw new InvalidOperationException($"Blink rejected the request: {raw}");
+
+        return result;
     }
 
     public ILocalStorageManifestResult? SystemGetLocalStorageManifest(IAuthAccount account, long networkId, long syncModuleId, long manifestRequestId, TimeSpan? pollInterval = null, int maxRetries = 120)
@@ -135,7 +140,12 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
             return null;
 
         var clipUrl = BuildLocalStorageClipUrl(account, networkId, syncModuleId, manifestId, clipId);
-        var prepareResult = (ApiDriver.Post(clipUrl) ?? string.Empty).Deserialize<ICommandStatusResponse>();
+        var rawPrepare = ApiDriver.Post(clipUrl) ?? string.Empty;
+        var prepareResult = rawPrepare.Deserialize<ICommandStatusResponse>();
+
+        if (prepareResult.Id == 0)
+            throw new InvalidOperationException($"Blink rejected the request: {rawPrepare}");
+
         var commandUrl = $"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/command/{prepareResult.Id}";
 
         return CommandPolling.WaitForCommandComplete(ApiDriver, commandUrl, pollInterval, maxRetries);
@@ -146,7 +156,12 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         if (ApiDriver is null)
             return null;
 
-        var triggerResult = (ApiDriver.Post(triggerUrl) ?? string.Empty).Deserialize<ICommandStatusResponse>();
+        var rawTrigger = ApiDriver.Post(triggerUrl) ?? string.Empty;
+        var triggerResult = rawTrigger.Deserialize<ICommandStatusResponse>();
+
+        if (triggerResult.Id == 0)
+            throw new InvalidOperationException($"Blink rejected the request: {rawTrigger}");
+
         var commandUrl = $"https://rest-{tier}.immedia-semi.com/network/{networkId}/command/{triggerResult.Id}";
 
         return CommandPolling.WaitForCommandComplete(ApiDriver, commandUrl, pollInterval, maxRetries);

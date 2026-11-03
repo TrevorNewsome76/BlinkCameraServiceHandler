@@ -4,7 +4,7 @@ using BlinkCommon.Interfaces;
 
 namespace BlinkCameraCall.Driver;
 
-internal class HttpClientApiHandler : IApiMethods, IDisposable
+public class HttpClientApiHandler : IApiMethods, IDisposable
 {
     private readonly HttpClientHandler _handler = new()
     {
@@ -56,7 +56,11 @@ internal class HttpClientApiHandler : IApiMethods, IDisposable
 
     public string Get(string url) => _httpClient.GetAsync(url).Result.Content.ReadAsStringAsync().Result;
 
-    public byte[] GetBytes(string url) => _httpClient.GetAsync(url).Result.Content.ReadAsByteArrayAsync().Result;
+    public byte[]? GetBytes(string url)
+    {
+        var response = _httpClient.GetAsync(url).Result;
+        return response.IsSuccessStatusCode ? response.Content.ReadAsByteArrayAsync().Result : null;
+    }
 
     void IDisposable.Dispose()
     {
