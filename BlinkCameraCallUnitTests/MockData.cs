@@ -76,6 +76,17 @@ public static class MockData
         Message = "Invalid credentials",
     };
 
+    public static OAuthLoginResult OAuthLoginNoThumbnailResult() => new()
+    {
+        Success = true,
+        AccessToken = "BU8fOjaF4E5POf4WTRm5wA",
+        RefreshToken = "mock-refresh-token",
+        Tier = "007",
+        AccountId = 999999,
+        ClientId = 1486061,
+        Message = "Login successful",
+    };
+
     public static OAuthLoginResult OAuthLoginTwoFactorRequiredResult() => new()
     {
         Success = false,
@@ -463,5 +474,19 @@ public static class MockData
         Duck.Implement<IHomeScreenTivLockStatus>(new
         {
             Locked = true
+        });
+
+    public static IGetHomeScreenResponse CreateHomeScreenResponseWithEmptyThumbnail() =>
+        Duck.Implement<IGetHomeScreenResponse>(new
+        {
+            Networks = Duck.Implement<List<IHomeScreenNetwork>>(new[]
+            {
+                new { Id = 1L, Name = "Solo Network", Armed = false },
+            }),
+            Cameras = Duck.Implement<List<IHomeScreenCamera>>(new[]
+            {
+                new { id = 1L, Name = "NoThumbCam", Enabled = true, Status = "done", Battery = "ok", Network_Id = 1L, Thumbnail = "" },
+            }),
+            Doorbells = Duck.Implement<List<IHomeScreenDoorbells>>(Array.Empty<object>()),
         });
 }

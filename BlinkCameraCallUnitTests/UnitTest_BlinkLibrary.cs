@@ -227,6 +227,101 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ImageFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Image(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_ImageFailedNoDevicesLoaded()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "Run MAP or GET first to load your devices.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+
+        //act
+        var actualResult = blinkLib.Image(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_ImageFailedDeviceNotFound()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "No single device named 'Unknown Camera' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Image(new[] { "nUnknown Camera" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_ImageFailedNoThumbnailYet()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "'NoThumbCam' has no image yet — run SNAP -nNoThumbCam first.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Image(new[] { "nNoThumbCam" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_ImageSuccessful()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var mediaDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+        try
+        {
+            //act
+            var actualResult = blinkLib.Image(new[] { "nPergoda" }, mediaDirectory);
+
+            //assert
+            actualResult.Should().StartWith("Saved image to ");
+            var path = actualResult["Saved image to ".Length..].TrimEnd('.');
+            File.Exists(path).Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(mediaDirectory))
+                Directory.Delete(mediaDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign

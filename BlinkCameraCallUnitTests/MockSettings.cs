@@ -28,4 +28,12 @@ public class MockSettings
         Password = "PAssword",
         HardwareId = string.Empty,
     });
+
+    public static IBlinkSettings CreateNoThumbnailSettings() => Duck.Implement<IBlinkSettings>(new
+    {
+        BaseUrl = "https://rest-prod.immedia-semi.com",
+        Email = "nothumbnail@email.com",
+        Password = "PAssword",
+        HardwareId = string.Empty,
+    });
 }

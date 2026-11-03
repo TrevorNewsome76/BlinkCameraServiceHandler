@@ -66,6 +66,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
                 HomeScreenCallCount++;
                 return MockData.CreateValidHomeScreenResponse().Serialize();
+            case "https://rest-007.immedia-semi.com/api/v3/accounts/999999/homescreen":
+                return MockData.CreateHomeScreenResponseWithEmptyThumbnail().Serialize();
             case "https://rest-007.immedia-semi.com/network/263178/command/500":
                 return "{\"id\":500,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/command/501":
@@ -77,7 +79,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
     public byte[]? GetBytes(string Url)
     {
-        throw new NotImplementedException();
+        return Url switch
+        {
+            "https://rest-007.immedia-semi.com/api/v3/media/accounts/239361/networks/263178/catalina/321343/thumbnail/thumbnail.jpg?ts=1705051738&ext=" =>
+                global::System.Text.Encoding.UTF8.GetBytes("fake-jpeg-bytes"),
+            _ => throw new NotImplementedException()
+        };
     }
 
     public void Dispose()

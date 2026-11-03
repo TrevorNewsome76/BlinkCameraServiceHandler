@@ -159,6 +159,38 @@ public class BlinkLibrary(IAdapter adapter)
             : doorbell!.ToDeviceDetailString(network);
     }
 
+    public string Image(string[] arguments, string? mediaDirectory = null)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_sessionDetails.Cameras is null && _sessionDetails.Doorbells is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var name = arguments.ExtractDeviceName();
+        var camera = _sessionDetails.FindCameraByName(name);
+        var doorbell = camera is null ? _sessionDetails.FindDoorbellByName(name) : null;
+
+        if (camera is null && doorbell is null)
+            return $"No single device named '{name}' was found. Run MAP to see exact names.";
+
+        var thumbnailField = camera?.Thumbnail ?? doorbell!.Thumbnail;
+        if (string.IsNullOrEmpty(thumbnailField))
+            return $"'{name}' has no image yet — run SNAP -n{name} first.";
+
+        var account = _sessionDetails.Account!;
+        var networkId = camera?.Network_Id ?? doorbell!.Network_Id;
+        var deviceId = camera?.id ?? doorbell!.Id;
+        var url = ThumbnailUrlExtension.BuildThumbnailUrl(thumbnailField, account.Tier, account.Account_Id, networkId, deviceId, isDoorbell: doorbell is not null);
+
+        var bytes = adapter.DownloadBytes(url);
+        if (bytes is null)
+            return $"Blink did not return an image for '{name}'.";
+
+        var path = MediaFileExtension.SaveMediaFile(name, bytes, "jpg", mediaDirectory);
+        return $"Saved image to {path}.";
+    }
+
     public string Help(string[] arguments)
     {
         return new string("LOGIN            Logs into Blink account (using settings file." +
