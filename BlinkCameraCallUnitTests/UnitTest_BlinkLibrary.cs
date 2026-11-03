@@ -10,6 +10,46 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
 {
 
     [Fact]
+    public void Test_MapFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Map();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_MapSuccessful()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected =
+            "Network: Home Front (disarmed)" + Environment.NewLine +
+            "  Sync Module: My Blink Sync Module  [online, fw 16.0.8, wifi 5]" + Environment.NewLine +
+            "  Camera: Pergoda  [enabled, status done, battery ok, wifi 5]" + Environment.NewLine +
+            "  Camera: Garage  [enabled, status done, battery ok, wifi 5]" + Environment.NewLine +
+            "  Doorbell: Front door bell  [enabled, status done, battery ok, wifi 5]" + Environment.NewLine +
+            Environment.NewLine +
+            "Network: Home Back (disarmed)" + Environment.NewLine +
+            "  Sync Module: My Blink Sync Module  [offline, fw 4.4.8, wifi 5]" + Environment.NewLine +
+            "  (no cameras or doorbells)";
+
+        //act
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var actualResult = blinkLib.Map();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign

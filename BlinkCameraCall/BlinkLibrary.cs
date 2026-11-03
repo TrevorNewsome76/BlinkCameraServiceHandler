@@ -90,6 +90,20 @@ public class BlinkLibrary(IAdapter adapter)
             return "Not currently logged into Blink service.";
     }
 
+    public string Map()
+    {
+        if (_sessionDetails?.Account is null || !_sessionDetails.LoggedInStatus)
+            return "Not currently logged into Blink service.";
+
+        var response = adapter.GetHomeScreen(_sessionDetails.Account);
+        _sessionDetails.Networks = response?.Networks;
+        _sessionDetails.SyncModules = response?.Sync_Modules;
+        _sessionDetails.Cameras = response?.Cameras;
+        _sessionDetails.Doorbells = response?.Doorbells;
+
+        return response is null ? "No devices found." : response.ToDeviceMapString();
+    }
+
     public string Help(string[] arguments)
     {
         return new string("LOGIN            Logs into Blink account (using settings file." +
