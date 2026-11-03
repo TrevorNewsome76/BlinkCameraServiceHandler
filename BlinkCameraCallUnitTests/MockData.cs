@@ -394,7 +394,7 @@ public static class MockData
                 Enabled = true,
                 Thumbnail = "/api/v3/media/accounts/239361/networks/263178/lotus/5009/thumbnail/thumbnail.jpg?ts=1705051747&ext=",
                 Status = "done",
-                Network_id = 263178,
+                Network_Id = 263178,
                 Battery = "ok",
                 Doorbell_mode = "lfr",
                 Changing_mode = false,

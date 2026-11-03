@@ -7,6 +7,7 @@ public interface IHomeScreenDoorbells
     DateTime Updated_At { get; }
     string Name { get; }
     string Type { get; }
+    long Network_Id { get; }
     bool Onboarded { get; }
     string Serial { get; }
     string Fw_Version { get; }
