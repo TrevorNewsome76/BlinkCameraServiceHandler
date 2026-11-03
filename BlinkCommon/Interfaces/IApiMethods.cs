@@ -8,4 +8,5 @@ public interface IApiMethods
     string? Post(string Url);
     string? Put(string Url, string serializedJsonString);
     string? Get(string Url);
+    byte[]? GetBytes(string Url);
 }

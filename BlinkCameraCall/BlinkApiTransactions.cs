@@ -91,4 +91,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         var result = ApiDriver?.Get(baseString) ?? string.Empty;
         return Duck.Implement<IGetHomeScreenResponse>((JsonProxy)result);
     }
+
+    public byte[]? DownloadBytes(string url) =>
+        ApiDriver?.GetBytes(url);
 }

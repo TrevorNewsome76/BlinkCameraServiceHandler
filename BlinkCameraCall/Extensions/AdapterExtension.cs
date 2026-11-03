@@ -34,4 +34,7 @@ public static class AdapterExtension
     public static IGetHomeScreenResponse
         GetHomeScreen(this IAdapter adapter, IAuthAccount account) =>
         Transactions.SystemGetHomeScreen(account) ?? Duck.Implement<IGetHomeScreenResponse>();
+
+    public static byte[]? DownloadBytes(this IAdapter adapter, string url) =>
+        Transactions.DownloadBytes(url);
 }

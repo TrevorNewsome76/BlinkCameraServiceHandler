@@ -56,6 +56,8 @@ internal class HttpClientApiHandler : IApiMethods, IDisposable
 
     public string Get(string url) => _httpClient.GetAsync(url).Result.Content.ReadAsStringAsync().Result;
 
+    public byte[] GetBytes(string url) => _httpClient.GetAsync(url).Result.Content.ReadAsByteArrayAsync().Result;
+
     void IDisposable.Dispose()
     {
         _httpClient.Dispose();

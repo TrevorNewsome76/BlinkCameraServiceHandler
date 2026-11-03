@@ -12,4 +12,5 @@ public interface IApiTransactions
     ILogoutResponse? AuthLogout(IAuthAccount account);
     IVerifyPinResponse? AuthVerifyPin(IAuthAccount account, string pinCode);
     IGetHomeScreenResponse? SystemGetHomeScreen(IAuthAccount account);
+    byte[]? DownloadBytes(string url);
 }

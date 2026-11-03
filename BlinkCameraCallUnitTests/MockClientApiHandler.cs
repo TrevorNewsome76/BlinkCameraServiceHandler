@@ -68,6 +68,11 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
         }
     }
 
+    public byte[]? GetBytes(string Url)
+    {
+        throw new NotImplementedException();
+    }
+
     public void Dispose()
     {
         throw new NotImplementedException();
