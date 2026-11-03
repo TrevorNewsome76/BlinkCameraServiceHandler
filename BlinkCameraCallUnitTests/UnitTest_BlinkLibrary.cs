@@ -140,6 +140,93 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_DeviceFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Device(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DeviceFailedNoDevicesLoaded()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "Run MAP or GET first to load your devices.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+
+        //act
+        var actualResult = blinkLib.Device(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DeviceFailedDeviceNotFound()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "No single device named 'Unknown Camera' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Device(new[] { "nUnknown Camera" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DeviceSuccessful_Camera()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var expected = MockData.CreateValidHomeScreenCameras()[0]
+            .ToDeviceDetailString(MockData.CreateValidHomeScreenNetworks()[0]);
+
+        //act
+        var actualResult = blinkLib.Device(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DeviceSuccessful_Doorbell()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var expected = MockData.CreateValidHomeScreenDoorbells()[0]
+            .ToDeviceDetailString(MockData.CreateValidHomeScreenNetworks()[0]);
+
+        //act
+        var actualResult = blinkLib.Device(new[] { "nFront door bell" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign

@@ -135,6 +135,30 @@ public class BlinkLibrary(IAdapter adapter)
         return $"New image captured for '{name}'. Run IMAGE -n{name} to download it.";
     }
 
+    public string Device(string[] arguments)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_sessionDetails.Cameras is null && _sessionDetails.Doorbells is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var name = arguments.ExtractDeviceName();
+        var camera = _sessionDetails.FindCameraByName(name);
+        var doorbell = camera is null ? _sessionDetails.FindDoorbellByName(name) : null;
+
+        if (camera is null && doorbell is null)
+            return $"No single device named '{name}' was found. Run MAP to see exact names.";
+
+        var networkId = camera?.Network_Id ?? doorbell!.Network_Id;
+        var network = _sessionDetails.Networks?.FirstOrDefault(n => n.Id == networkId)
+            ?? Duck.Implement<IHomeScreenNetwork>(new { Name = "Unknown", Armed = false });
+
+        return camera is not null
+            ? camera.ToDeviceDetailString(network)
+            : doorbell!.ToDeviceDetailString(network);
+    }
+
     public string Help(string[] arguments)
     {
         return new string("LOGIN            Logs into Blink account (using settings file." +
