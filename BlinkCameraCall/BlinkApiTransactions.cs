@@ -110,6 +110,22 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         return result.Deserialize<IMediaChangedResponse>();
     }
 
+    public IManifestRequestResponse? SystemRequestLocalStorageManifest(IAuthAccount account, long networkId, long syncModuleId)
+    {
+        var url = $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/sync_modules/{syncModuleId}/local_storage/manifest/request";
+        var result = ApiDriver?.Post(url) ?? string.Empty;
+        return result.Deserialize<IManifestRequestResponse>();
+    }
+
+    public ILocalStorageManifestResult? SystemGetLocalStorageManifest(IAuthAccount account, long networkId, long syncModuleId, long manifestRequestId, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (ApiDriver is null)
+            return null;
+
+        var url = $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/sync_modules/{syncModuleId}/local_storage/manifest/request/{manifestRequestId}";
+        return ManifestPolling.WaitForManifestReady(ApiDriver, url, pollInterval, maxRetries);
+    }
+
     private static ICommandStatusResponse? TriggerSnapshot(string triggerUrl, long networkId, string tier, TimeSpan? pollInterval, int maxRetries)
     {
         if (ApiDriver is null)

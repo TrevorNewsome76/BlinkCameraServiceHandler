@@ -46,4 +46,10 @@ public static class AdapterExtension
 
     public static IMediaChangedResponse? GetRecentMedia(this IAdapter adapter, IAuthAccount account, DateTime sinceUtc) =>
         Transactions.SystemGetRecentMedia(account, sinceUtc);
+
+    public static IManifestRequestResponse? RequestLocalStorageManifest(this IAdapter adapter, IAuthAccount account, long networkId, long syncModuleId) =>
+        Transactions.SystemRequestLocalStorageManifest(account, networkId, syncModuleId);
+
+    public static ILocalStorageManifestResult? GetLocalStorageManifest(this IAdapter adapter, IAuthAccount account, long networkId, long syncModuleId, long manifestRequestId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        Transactions.SystemGetLocalStorageManifest(account, networkId, syncModuleId, manifestRequestId, pollInterval, maxRetries);
 }

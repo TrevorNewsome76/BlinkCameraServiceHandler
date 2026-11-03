@@ -10,6 +10,7 @@ public class BlinkLibrary(IAdapter adapter)
 {
     private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
     private List<ICloudMediaItem>? _lastCloudMedia;
+    private (long SyncModuleId, long ManifestId, List<ILocalStorageClip> Clips)? _lastLocalManifest;
 
     public string Login()
     {
@@ -222,6 +223,38 @@ public class BlinkLibrary(IAdapter adapter)
 
         var path = MediaFileExtension.SaveMediaFile(item.Device_Name, bytes, "mp4", mediaDirectory);
         return $"Saved video to {path}.";
+    }
+
+    public string LocalClips(string[] arguments, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_sessionDetails.SyncModules is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var name = arguments.ExtractDeviceName();
+        var syncModule = _sessionDetails.FindSyncModuleByName(name);
+
+        if (syncModule is null)
+            return $"No single device named '{name}' was found. Run MAP to see exact names.";
+
+        if (syncModule.Local_Storage_Status != "active")
+            return $"'{name}' doesn't have active local storage.";
+
+        var account = _sessionDetails.Account!;
+        var networkId = long.Parse(syncModule.Network_Id);
+
+        var requestResult = adapter.RequestLocalStorageManifest(account, networkId, syncModule.Id);
+        var manifestResult = adapter.GetLocalStorageManifest(account, networkId, syncModule.Id, requestResult!.Id, pollInterval, maxRetries);
+
+        if (manifestResult is null)
+            return $"Blink did not finish reading the SD-card manifest for '{name}' in time.";
+
+        var clips = manifestResult.Clips ?? new List<ILocalStorageClip>();
+        _lastLocalManifest = (syncModule.Id, manifestResult.Manifest_Id, clips);
+
+        return clips.ToLocalClipsListString(name);
     }
 
     public string Help(string[] arguments)

@@ -449,6 +449,127 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_LocalClipsFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).LocalClips(new[] { "nActive Sync" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsFailedNoDevicesLoaded()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "Run MAP or GET first to load your devices.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+
+        //act
+        var actualResult = blinkLib.LocalClips(new[] { "nActive Sync" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsFailedSyncModuleNotFound()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "No single device named 'Unknown Sync' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.LocalClips(new[] { "nUnknown Sync" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsFailedNotActive()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "'Inactive Sync' doesn't have active local storage.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.LocalClips(new[] { "nInactive Sync" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsSuccessful_PopulatesCache()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var expected = "[1] Id 1  Camera: Pergoda  Recorded: 2026-11-01 12:00:00 UTC  Size: 12345 bytes";
+
+        //act
+        var actualResult = blinkLib.LocalClips(new[] { "nActive Sync" }, TimeSpan.Zero, 3);
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsSuccessful_EmptyManifest()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var expected = "No clips on 'Empty Sync''s SD card.";
+
+        //act
+        var actualResult = blinkLib.LocalClips(new[] { "nEmpty Sync" }, TimeSpan.Zero, 3);
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalClipsTimedOut()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var expected = "Blink did not finish reading the SD-card manifest for 'Timeout Sync' in time.";
+
+        //act
+        var actualResult = blinkLib.LocalClips(new[] { "nTimeout Sync" }, TimeSpan.Zero, 2);
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign

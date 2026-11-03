@@ -49,6 +49,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":500,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/camera/321380/thumbnail":
                 return "{\"id\":501,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/request":
+                return "{\"id\":600}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/502/local_storage/manifest/request":
+                return "{\"id\":601}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/503/local_storage/manifest/request":
+                return "{\"id\":602}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }
@@ -69,6 +75,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
         switch (Url)
         {
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/request/600":
+                return "{\"manifest_id\":700,\"clips\":[{\"id\":1,\"camera_name\":\"Pergoda\",\"created_at\":\"2026-11-01T12:00:00+00:00\",\"size\":12345}]}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/502/local_storage/manifest/request/601":
+                return "{\"manifest_id\":701,\"clips\":[]}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/503/local_storage/manifest/request/602":
+                return "{\"id\":602}";
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
                 HomeScreenCallCount++;
                 return MockData.CreateValidHomeScreenResponse().Serialize();
