@@ -66,11 +66,15 @@ namespace BlinkCameraCall
                             case "get":
                                 Console.WriteLine(blinkLibrary.Get(command.Arguments));
                                 break;
+                            case "map":
+                                Console.WriteLine(blinkLibrary.Map());
+                                break;
                             case "help":
                                 Console.WriteLine(blinkLibrary.Help(command.Arguments));
                                 Console.WriteLine("LOGIN -u<username> -p<password>  Logs into system.");
                                 Console.WriteLine("LOGOUT                           Logs out of the system.");
                                 Console.WriteLine("GET -i<homescreen>               Gets home system information.");
+                                Console.WriteLine("MAP                              Shows a tree of networks, sync modules, cameras and doorbells.");
                                 Console.WriteLine("VERIFY -v<code>                     Verifies sms pin number sent after new login.");
                                 Console.WriteLine("QUIT, EXIT                       Exits program.");
                                 Console.WriteLine("HELP                             Provides Help information for Windows commands.");
