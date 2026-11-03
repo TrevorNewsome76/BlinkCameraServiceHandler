@@ -510,6 +510,7 @@ public static class MockData
                 new { Id = 501L, Name = "Inactive Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = false, Local_Storage_Compatible = true, Local_Storage_Status = "unavailable" },
                 new { Id = 502L, Name = "Empty Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = true, Local_Storage_Compatible = true, Local_Storage_Status = "active" },
                 new { Id = 503L, Name = "Timeout Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = true, Local_Storage_Compatible = true, Local_Storage_Status = "active" },
+                new { Id = 504L, Name = "Download Timeout Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = true, Local_Storage_Compatible = true, Local_Storage_Status = "active" },
             }),
         });
 }

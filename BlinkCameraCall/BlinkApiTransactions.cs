@@ -126,6 +126,21 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         return ManifestPolling.WaitForManifestReady(ApiDriver, url, pollInterval, maxRetries);
     }
 
+    public string BuildLocalStorageClipUrl(IAuthAccount account, long networkId, long syncModuleId, long manifestId, long clipId) =>
+        $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/sync_modules/{syncModuleId}/local_storage/manifest/{manifestId}/clip/request/{clipId}";
+
+    public ICommandStatusResponse? SystemPrepareLocalStorageClip(IAuthAccount account, long networkId, long syncModuleId, long manifestId, long clipId, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (ApiDriver is null)
+            return null;
+
+        var clipUrl = BuildLocalStorageClipUrl(account, networkId, syncModuleId, manifestId, clipId);
+        var prepareResult = (ApiDriver.Post(clipUrl) ?? string.Empty).Deserialize<ICommandStatusResponse>();
+        var commandUrl = $"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/command/{prepareResult.Id}";
+
+        return CommandPolling.WaitForCommandComplete(ApiDriver, commandUrl, pollInterval, maxRetries);
+    }
+
     private static ICommandStatusResponse? TriggerSnapshot(string triggerUrl, long networkId, string tier, TimeSpan? pollInterval, int maxRetries)
     {
         if (ApiDriver is null)

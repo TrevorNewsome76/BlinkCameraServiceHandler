@@ -257,6 +257,43 @@ public class BlinkLibrary(IAdapter adapter)
         return clips.ToLocalClipsListString(name);
     }
 
+    public string LocalDownload(string[] arguments, TimeSpan? pollInterval = null, int maxRetries = 120, string? mediaDirectory = null)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        var name = arguments.ExtractDeviceName();
+        var syncModule = _sessionDetails.FindSyncModuleByName(name);
+
+        if (syncModule is null)
+            return $"No single device named '{name}' was found. Run MAP to see exact names.";
+
+        if (_lastLocalManifest is null || _lastLocalManifest.Value.SyncModuleId != syncModule.Id)
+            return $"Run LOCALCLIPS -n{name} first.";
+
+        var id = arguments.ExtractMediaId();
+        var clip = _lastLocalManifest.Value.Clips.FirstOrDefault(c => c.Id == id);
+
+        if (clip is null)
+            return $"'{id}' wasn't in the last LOCALCLIPS list for '{name}'.";
+
+        var account = _sessionDetails.Account!;
+        var networkId = long.Parse(syncModule.Network_Id);
+        var manifestId = _lastLocalManifest.Value.ManifestId;
+
+        var prepareResult = adapter.PrepareLocalStorageClip(account, networkId, syncModule.Id, manifestId, id, pollInterval, maxRetries);
+        if (prepareResult is null)
+            return $"Blink did not finish preparing the clip for '{name}' in time.";
+
+        var url = adapter.BuildLocalStorageClipUrl(account, networkId, syncModule.Id, manifestId, id);
+        var bytes = adapter.DownloadBytes(url);
+        if (bytes is null)
+            return $"Blink did not return the clip for '{name}'.";
+
+        var path = MediaFileExtension.SaveMediaFile(clip.Camera_Name, bytes, "mp4", mediaDirectory);
+        return $"Saved video to {path}.";
+    }
+
     public string Help(string[] arguments)
     {
         return new string("LOGIN            Logs into Blink account (using settings file." +

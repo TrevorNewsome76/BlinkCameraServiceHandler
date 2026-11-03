@@ -570,6 +570,142 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_LocalDownloadFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).LocalDownload(new[] { "nActive Sync", "i1" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalDownloadFailedSyncModuleNotFound()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "No single device named 'Unknown Sync' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.LocalDownload(new[] { "nUnknown Sync", "i1" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalDownloadFailedNoCachedManifest()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "Run LOCALCLIPS -nActive Sync first.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.LocalDownload(new[] { "nActive Sync", "i1" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalDownloadFailedSyncModuleMismatch()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "Run LOCALCLIPS -nActive Sync first.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalClips(new[] { "nEmpty Sync" }, TimeSpan.Zero, 3);
+
+        //act
+        var actualResult = blinkLib.LocalDownload(new[] { "nActive Sync", "i1" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalDownloadFailedClipIdNotInManifest()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "'9999' wasn't in the last LOCALCLIPS list for 'Active Sync'.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalClips(new[] { "nActive Sync" }, TimeSpan.Zero, 3);
+
+        //act
+        var actualResult = blinkLib.LocalDownload(new[] { "nActive Sync", "i9999" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalDownloadSuccessful()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalClips(new[] { "nActive Sync" }, TimeSpan.Zero, 3);
+        var mediaDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+        try
+        {
+            //act
+            var actualResult = blinkLib.LocalDownload(new[] { "nActive Sync", "i1" }, TimeSpan.Zero, 3, mediaDirectory);
+
+            //assert
+            actualResult.Should().StartWith("Saved video to ");
+            var path = actualResult["Saved video to ".Length..].TrimEnd('.');
+            File.Exists(path).Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(mediaDirectory))
+                Directory.Delete(mediaDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Test_LocalDownloadTimedOut()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var expected = "Blink did not finish preparing the clip for 'Download Timeout Sync' in time.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalClips(new[] { "nDownload Timeout Sync" }, TimeSpan.Zero, 3);
+
+        //act
+        var actualResult = blinkLib.LocalDownload(new[] { "nDownload Timeout Sync", "i2" }, TimeSpan.Zero, 2);
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign

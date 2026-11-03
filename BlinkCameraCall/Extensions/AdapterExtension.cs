@@ -52,4 +52,10 @@ public static class AdapterExtension
 
     public static ILocalStorageManifestResult? GetLocalStorageManifest(this IAdapter adapter, IAuthAccount account, long networkId, long syncModuleId, long manifestRequestId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         Transactions.SystemGetLocalStorageManifest(account, networkId, syncModuleId, manifestRequestId, pollInterval, maxRetries);
+
+    public static string BuildLocalStorageClipUrl(this IAdapter adapter, IAuthAccount account, long networkId, long syncModuleId, long manifestId, long clipId) =>
+        Transactions.BuildLocalStorageClipUrl(account, networkId, syncModuleId, manifestId, clipId);
+
+    public static ICommandStatusResponse? PrepareLocalStorageClip(this IAdapter adapter, IAuthAccount account, long networkId, long syncModuleId, long manifestId, long clipId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        Transactions.SystemPrepareLocalStorageClip(account, networkId, syncModuleId, manifestId, clipId, pollInterval, maxRetries);
 }

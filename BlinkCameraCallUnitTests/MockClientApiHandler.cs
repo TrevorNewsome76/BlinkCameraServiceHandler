@@ -55,6 +55,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":601}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/503/local_storage/manifest/request":
                 return "{\"id\":602}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/request":
+                return "{\"id\":603}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/700/clip/request/1":
+                return "{\"id\":900}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/702/clip/request/2":
+                return "{\"id\":801}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }
@@ -81,6 +87,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"manifest_id\":701,\"clips\":[]}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/503/local_storage/manifest/request/602":
                 return "{\"id\":602}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/request/603":
+                return "{\"manifest_id\":702,\"clips\":[{\"id\":2,\"camera_name\":\"Garage\",\"created_at\":\"2026-11-01T14:00:00+00:00\",\"size\":9999}]}";
+            case "https://rest-007.immedia-semi.com/network/1/command/900":
+                return "{\"id\":900,\"network_id\":1,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/1/command/801":
+                return "{\"id\":801,\"network_id\":1,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
                 HomeScreenCallCount++;
                 return MockData.CreateValidHomeScreenResponse().Serialize();
@@ -103,6 +115,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 global::System.Text.Encoding.UTF8.GetBytes("fake-jpeg-bytes"),
             "https://rest-007.immedia-semi.com/media/clip1.mp4" =>
                 global::System.Text.Encoding.UTF8.GetBytes("fake-mp4-bytes"),
+            "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/700/clip/request/1" =>
+                global::System.Text.Encoding.UTF8.GetBytes("fake-local-mp4-bytes"),
             _ => throw new NotImplementedException()
         };
     }
