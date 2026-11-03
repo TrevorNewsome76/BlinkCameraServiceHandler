@@ -76,6 +76,24 @@ public class UnitTest_DeviceMapExtension
     }
 
     [Fact]
+    public void Test_NoNetworks_DevicesStillReportedAsUnassigned()
+    {
+        var response = Duck.Implement<IGetHomeScreenResponse>(new
+        {
+            Cameras = Duck.Implement<List<IHomeScreenCamera>>(new[]
+            {
+                new { id = 1L, Name = "Orphan Camera", Enabled = true, Status = "done", Battery = "ok", Network_Id = 99L }
+            }),
+        });
+
+        var expected =
+            "Unassigned devices:" + Environment.NewLine +
+            "  Camera: Orphan Camera  [enabled, status done, battery ok, wifi n/a]";
+
+        response.ToDeviceMapString().Should().Be(expected);
+    }
+
+    [Fact]
     public void Test_NonEmptyAccessoryArrays_AppendCountLines()
     {
         var response = Duck.Implement<IGetHomeScreenResponse>(new
@@ -89,7 +107,7 @@ public class UnitTest_DeviceMapExtension
             "Network: N (disarmed)" + Environment.NewLine +
             "  (no cameras or doorbells)" + Environment.NewLine +
             Environment.NewLine +
-            "Owls: 2 (not detailed)" + Environment.NewLine +
+            "Owls (Blink Mini cameras): 2 (not detailed)" + Environment.NewLine +
             "Sirens: 1 (not detailed)";
 
         response.ToDeviceMapString().Should().Be(expected);

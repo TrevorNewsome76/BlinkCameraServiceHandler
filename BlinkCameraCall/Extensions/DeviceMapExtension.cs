@@ -11,7 +11,7 @@ public static class DeviceMapExtension
         var cameras = response.Cameras ?? new List<IHomeScreenCamera>();
         var doorbells = response.Doorbells ?? new List<IHomeScreenDoorbells>();
 
-        if (networks.Count == 0)
+        if (networks.Count == 0 && syncModules.Count == 0 && cameras.Count == 0 && doorbells.Count == 0)
             return "No devices found.";
 
         var networkIds = networks.Select(n => n.Id.ToString()).ToHashSet();
@@ -57,7 +57,7 @@ public static class DeviceMapExtension
         }
 
         var accessoryLines = new List<string>();
-        AddAccessoryLine(accessoryLines, "Owls", response.Owls);
+        AddAccessoryLine(accessoryLines, "Owls (Blink Mini cameras)", response.Owls);
         AddAccessoryLine(accessoryLines, "Sirens", response.Sirens);
         AddAccessoryLine(accessoryLines, "Chimes", response.Chimes);
         AddAccessoryLine(accessoryLines, "Doorbell_Buttons", response.Doorbell_Buttons);
