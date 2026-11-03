@@ -104,6 +104,37 @@ public class BlinkLibrary(IAdapter adapter)
         return response is null ? "No devices found." : response.ToDeviceMapString();
     }
 
+    public string Snap(string[] arguments, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_sessionDetails.Cameras is null && _sessionDetails.Doorbells is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var name = arguments.ExtractDeviceName();
+        var camera = _sessionDetails.FindCameraByName(name);
+        var doorbell = camera is null ? _sessionDetails.FindDoorbellByName(name) : null;
+
+        if (camera is null && doorbell is null)
+            return $"No single device named '{name}' was found. Run MAP to see exact names.";
+
+        var result = camera is not null
+            ? adapter.TriggerCameraSnapshot(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries)
+            : adapter.TriggerDoorbellSnapshot(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries);
+
+        if (result is null)
+            return $"Blink did not finish capturing a new image for '{name}' in time.";
+
+        var response = adapter.GetHomeScreen(_sessionDetails.Account!);
+        _sessionDetails.Networks = response?.Networks;
+        _sessionDetails.SyncModules = response?.Sync_Modules;
+        _sessionDetails.Cameras = response?.Cameras;
+        _sessionDetails.Doorbells = response?.Doorbells;
+
+        return $"New image captured for '{name}'. Run IMAGE -n{name} to download it.";
+    }
+
     public string Help(string[] arguments)
     {
         return new string("LOGIN            Logs into Blink account (using settings file." +

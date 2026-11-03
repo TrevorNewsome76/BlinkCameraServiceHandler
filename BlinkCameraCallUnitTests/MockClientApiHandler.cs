@@ -7,6 +7,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 {
     public string AccessToken { get; set; } = string.Empty;
 
+    public int HomeScreenCallCount { get; private set; }
+
     public bool SetAccessToken(string accessToken)
     {
         if (accessToken == "BU8fOjaF4E5POf4WTRm5wA")
@@ -43,10 +45,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
         {
             case "https://rest-prod.immedia-semi.com/api/v4/account/134166/client/1486061/logout":
                 return MockData.AuthLogoutCorrectResponse().Serialize();
-                break;
+            case "https://rest-007.immedia-semi.com/network/263178/camera/321343/thumbnail":
+                return "{\"id\":500,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/camera/321380/thumbnail":
+                return "{\"id\":501,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
-                break;
         }
     }
 
@@ -60,11 +64,14 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
         switch (Url)
         {
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
+                HomeScreenCallCount++;
                 return MockData.CreateValidHomeScreenResponse().Serialize();
-                break;
+            case "https://rest-007.immedia-semi.com/network/263178/command/500":
+                return "{\"id\":500,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/501":
+                return "{\"id\":501,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
-                break;
         }
     }
 

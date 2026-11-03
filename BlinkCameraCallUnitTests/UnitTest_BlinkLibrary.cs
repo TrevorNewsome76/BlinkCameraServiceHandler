@@ -1,5 +1,7 @@
 ﻿using BlinkCameraCall;
 using BlinkCameraCall.Extensions;
+using BlinkCommon.Interfaces;
+using Dependency;
 using FluentAssertions;
 using Xunit.Abstractions;
 
@@ -44,6 +46,94 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var blinkLib = new BlinkLibrary(mockAdapter);
         blinkLib.Login(loginArguments);
         var actualResult = blinkLib.Map();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_SnapFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Snap(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_SnapFailedNoDevicesLoaded()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "Run MAP or GET first to load your devices.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+
+        //act
+        var actualResult = blinkLib.Snap(new[] { "nPergoda" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_SnapFailedDeviceNotFound()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "No single device named 'Unknown Camera' was found. Run MAP to see exact names.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Snap(new[] { "nUnknown Camera" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_SnapSuccessful_Camera()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "New image captured for 'Pergoda'. Run IMAGE -nPergoda to download it.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+        var callsBeforeSnap = apiMethods.HomeScreenCallCount;
+
+        //act
+        var actualResult = blinkLib.Snap(new[] { "nPergoda" }, TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+        apiMethods.HomeScreenCallCount.Should().Be(callsBeforeSnap + 1);
+    }
+
+    [Fact]
+    public void Test_SnapTimedOut()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var expected = "Blink did not finish capturing a new image for 'Garage' in time.";
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+
+        //act
+        var actualResult = blinkLib.Snap(new[] { "nGarage" }, TimeSpan.Zero, 2);
 
         //assert
         actualResult.Should().BeEquivalentTo(expected);

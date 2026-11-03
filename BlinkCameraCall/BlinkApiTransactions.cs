@@ -1,4 +1,5 @@
-﻿using BlinkCommon.Extensions;
+﻿using BlinkCameraCall.Driver;
+using BlinkCommon.Extensions;
 using BlinkCommon.Interfaces;
 using BlinkCommon.Interfaces.Auth;
 using BlinkCommon.Interfaces.System;
@@ -94,4 +95,21 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
 
     public byte[]? DownloadBytes(string url) =>
         ApiDriver?.GetBytes(url);
+
+    public ICommandStatusResponse? SystemTriggerCameraSnapshot(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/thumbnail", networkId, account.Tier, pollInterval, maxRetries);
+
+    public ICommandStatusResponse? SystemTriggerDoorbellSnapshot(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/thumbnail", networkId, account.Tier, pollInterval, maxRetries);
+
+    private static ICommandStatusResponse? TriggerSnapshot(string triggerUrl, long networkId, string tier, TimeSpan? pollInterval, int maxRetries)
+    {
+        if (ApiDriver is null)
+            return null;
+
+        var triggerResult = (ApiDriver.Post(triggerUrl) ?? string.Empty).Deserialize<ICommandStatusResponse>();
+        var commandUrl = $"https://rest-{tier}.immedia-semi.com/network/{networkId}/command/{triggerResult.Id}";
+
+        return CommandPolling.WaitForCommandComplete(ApiDriver, commandUrl, pollInterval, maxRetries);
+    }
 }

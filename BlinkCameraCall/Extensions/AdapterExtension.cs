@@ -37,4 +37,10 @@ public static class AdapterExtension
 
     public static byte[]? DownloadBytes(this IAdapter adapter, string url) =>
         Transactions.DownloadBytes(url);
+
+    public static ICommandStatusResponse? TriggerCameraSnapshot(this IAdapter adapter, IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        Transactions.SystemTriggerCameraSnapshot(account, networkId, cameraId, pollInterval, maxRetries);
+
+    public static ICommandStatusResponse? TriggerDoorbellSnapshot(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        Transactions.SystemTriggerDoorbellSnapshot(account, networkId, doorbellId, pollInterval, maxRetries);
 }
