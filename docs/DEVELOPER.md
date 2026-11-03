@@ -272,6 +272,36 @@ deserialized straight into `IGetHomeScreenResponse` (and its many nested
 `IHomeScreen*` interfaces) via the duck-typing JSON path (§3.1), then copied onto
 `BlinkLibrary`'s `_sessionDetails` by `BlinkLibrary.Get`.
 
+### 7.1 The `MAP` command
+
+`GET -ihome` fetches this data but only ever prints `"Command ran successfully."` -
+none of it is shown anywhere. `MAP` (`BlinkLibrary.Map`) calls the exact same
+`adapter.GetHomeScreen(account)` and updates session state the same way, then pipes
+the response through `IGetHomeScreenResponse.ToDeviceMapString()`
+(`BlinkCameraCall/Extensions/DeviceMapExtension.cs`) to print a Network → Sync
+Module → Camera/Doorbell tree.
+
+That extension method is deliberately a pure function - no I/O, no Shelf/adapter
+access, just a response object in and a formatted string out - so its grouping and
+edge-case logic (a network with no cameras/doorbells, a device whose `Network_Id`
+matches no network, null `Signals`) is unit-tested directly against hand-built duck
+objects, with no mocking required. The same null-defaulting discipline as elsewhere
+in this codebase applies: every one of `Networks`/`Sync_Modules`/`Cameras`/
+`Doorbells`/`Sirens`/`Chimes`/`Owls`/`Doorbell_Buttons` is treated as possibly null
+regardless of the interface's declared type, because duck-typed objects return null
+for anything the caller's anonymous object or the real JSON didn't set.
+
+Two things worth knowing if you touch this again:
+- `IHomeScreenDoorbells` originally had **no `Network_Id` property at all** - a
+  mock fixture field named `Network_id` (lowercase i) silently never reached it.
+  Grouping doorbells by network required adding that property to the interface
+  first.
+- Blink Mini cameras come back in the home-screen response as `Owls`, a bare
+  `string[]` that nothing in this codebase models in detail (see §10). `MAP` shows
+  them only as a count (`"Owls (Blink Mini cameras): N (not detailed)"`) rather than
+  listing each one - deliberately, to avoid implying a Mini-only account has "no
+  cameras" while still not overstating what's actually modeled.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per
@@ -333,6 +363,12 @@ or deliberately decide to still skip:
   pre-existing oddity (not introduced by the login rewrite) that `Program.cs`
   depends on via `using BlinkCameraCallUnitTests.Extensions;` - harmless, but
   confusing, and worth fixing if you're already rebuilding from scratch.
+- **`Sirens`/`Chimes`/`Owls`/`Doorbell_Buttons` on `IGetHomeScreenResponse` are
+  still raw `string[]` placeholders**, not modeled with real device shapes the way
+  `Cameras`/`Doorbells`/`Sync_Modules` are. `MAP` (§7.1) shows them only as a bare
+  count rather than pretending to detail them. Blink Mini cameras (`Owls`) are the
+  one case worth modeling properly first, since they're actual cameras a user would
+  expect to see individually, not an accessory.
 
 ## 11. If you had to rebuild this from scratch, in order
 

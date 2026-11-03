@@ -3,8 +3,8 @@
 BlinkCameraServiceHandler is a Windows console application for logging into a
 personal [Blink](https://blinkforhome.com/) home-security account and running a
 small set of commands against it: login (including two-factor codes), logout,
-client-trust PIN verification, and fetching your "home screen" (networks, sync
-modules, cameras, doorbells).
+client-trust PIN verification, fetching your "home screen" (networks, sync
+modules, cameras, doorbells), and printing a readable device map.
 
 If you want to know *how* it works instead of how to use it, see
 [DEVELOPER.md](DEVELOPER.md).
@@ -67,6 +67,7 @@ Type commands at the prompt, one per line, and press Enter.
 | Login (explicit credentials) | `LOGIN -u<email> -p<password>` | Logs in with the given email/password instead of what's in `settings.json`. No space between `-u`/`-p` and the value. |
 | Verify a code | `VERIFY -v<code>` | Enters a verification code. Does one of two things depending on what just happened (see "Two-factor logins" below): completes a pending two-factor login, or verifies an old-style client-trust PIN. |
 | Get home screen info | `GET -ihome` | Fetches your account's networks, sync modules, cameras and doorbells. Requires being logged in first. |
+| Show a device map | `MAP` | Fetches the same data as `GET -ihome` and prints it as a readable tree: each network, with its sync module, cameras and doorbells nested underneath, each showing online/armed/enabled status, battery, wifi signal and firmware version. Requires being logged in first. |
 | Logout | `LOGOUT` | Logs out of the current session. |
 | Help | `HELP` | Prints command help. |
 | Quit | `QUIT` or `EXIT` | Exits the program. |
@@ -86,12 +87,33 @@ Login to the Blink Service successful.
 GET -ihome
 Command ran successfully.
 
+MAP
+Network: Home (armed)
+  Sync Module: My Blink Sync Module  [online, fw 16.0.8, wifi 5]
+  Camera: Front Door  [enabled, status done, battery ok, wifi 5]
+
 LOGOUT
 Successfully logged out.
 
 EXIT
 Goodbye
 ```
+
+## Device map (`MAP`)
+
+`MAP` groups everything under the network it belongs to. A network with no
+cameras or doorbells (just a sync module, or nothing at all) shows
+`(no cameras or doorbells)` instead of an empty line. If Blink ever returns a
+device that doesn't match any network in the response, it's listed under a
+trailing `Unassigned devices:` section rather than silently dropped.
+
+Blink Mini cameras, sirens, chimes and wired doorbell buttons aren't modeled
+in detail yet — if your account has any, they show up as a bare count at the
+end, e.g. `Owls (Blink Mini cameras): 2 (not detailed)`, rather than being
+listed individually.
+
+If you're not logged in, `MAP` gives the same `Not currently logged into
+Blink service.` message as `VERIFY`/`GET`/`LOGOUT`.
 
 ## Two-factor logins
 
