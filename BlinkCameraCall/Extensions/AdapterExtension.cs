@@ -43,4 +43,7 @@ public static class AdapterExtension
 
     public static ICommandStatusResponse? TriggerDoorbellSnapshot(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         Transactions.SystemTriggerDoorbellSnapshot(account, networkId, doorbellId, pollInterval, maxRetries);
+
+    public static IMediaChangedResponse? GetRecentMedia(this IAdapter adapter, IAuthAccount account, DateTime sinceUtc) =>
+        Transactions.SystemGetRecentMedia(account, sinceUtc);
 }

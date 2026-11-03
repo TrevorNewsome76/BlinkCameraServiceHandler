@@ -322,6 +322,133 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_VideosFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Videos(Array.Empty<string>());
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_VideosSuccessful_PopulatesCache()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var expected =
+            "[1] Id 3001  Device: Pergoda  Recorded: 2026-11-01 12:00:00 UTC" + Environment.NewLine +
+            "[2] Id 3002  Device: Garage  Recorded: 2026-11-01 13:00:00 UTC";
+
+        //act
+        var actualResult = blinkLib.Videos(Array.Empty<string>());
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_VideosSuccessful_NoEvents()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var expected = "No cloud video events in the last 24 hours.";
+
+        //act
+        var actualResult = blinkLib.Videos(Array.Empty<string>());
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DownloadFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Download(new[] { "i3001" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DownloadFailedNoCachedList()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var expected = "Run VIDEOS first, or '3001' wasn't in the last VIDEOS list.";
+
+        //act
+        var actualResult = blinkLib.Download(new[] { "i3001" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DownloadFailedIdNotInCachedList()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Videos(Array.Empty<string>());
+        var expected = "Run VIDEOS first, or '9999' wasn't in the last VIDEOS list.";
+
+        //act
+        var actualResult = blinkLib.Download(new[] { "i9999" });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_DownloadSuccessful()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Videos(Array.Empty<string>());
+        var mediaDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+        try
+        {
+            //act
+            var actualResult = blinkLib.Download(new[] { "i3001" }, mediaDirectory);
+
+            //assert
+            actualResult.Should().StartWith("Saved video to ");
+            var path = actualResult["Saved video to ".Length..].TrimEnd('.');
+            File.Exists(path).Should().BeTrue();
+        }
+        finally
+        {
+            if (Directory.Exists(mediaDirectory))
+                Directory.Delete(mediaDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
     public void Test_LoginFailedInvalidCredentials()
     {
         //assign

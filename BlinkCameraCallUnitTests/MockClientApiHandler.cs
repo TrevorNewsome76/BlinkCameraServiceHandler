@@ -61,6 +61,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
     public string? Get(string Url)
     {
+        if (Url.StartsWith("https://rest-007.immedia-semi.com/api/v1/accounts/134166/media/changed?since="))
+            return MockData.CreateCloudMediaChangedResponse().Serialize();
+
+        if (Url.StartsWith("https://rest-007.immedia-semi.com/api/v1/accounts/999999/media/changed?since="))
+            return MockData.CreateEmptyCloudMediaChangedResponse().Serialize();
+
         switch (Url)
         {
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
@@ -83,6 +89,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
         {
             "https://rest-007.immedia-semi.com/api/v3/media/accounts/239361/networks/263178/catalina/321343/thumbnail/thumbnail.jpg?ts=1705051738&ext=" =>
                 global::System.Text.Encoding.UTF8.GetBytes("fake-jpeg-bytes"),
+            "https://rest-007.immedia-semi.com/media/clip1.mp4" =>
+                global::System.Text.Encoding.UTF8.GetBytes("fake-mp4-bytes"),
             _ => throw new NotImplementedException()
         };
     }

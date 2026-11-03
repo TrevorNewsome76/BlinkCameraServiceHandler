@@ -476,6 +476,22 @@ public static class MockData
             Locked = true
         });
 
+    public static IMediaChangedResponse CreateCloudMediaChangedResponse() =>
+        Duck.Implement<IMediaChangedResponse>(new
+        {
+            Media = Duck.Implement<List<ICloudMediaItem>>(new[]
+            {
+                new { Id = 3001L, Network_Id = 263178L, Device_Id = 321343L, Device_Name = "Pergoda", Created_At = "2026-11-01T12:00:00+00:00", Media = "/media/clip1.mp4", Deleted = false },
+                new { Id = 3002L, Network_Id = 263178L, Device_Id = 321380L, Device_Name = "Garage", Created_At = "2026-11-01T13:00:00+00:00", Media = "/media/clip2.mp4", Deleted = false },
+            }),
+        });
+
+    public static IMediaChangedResponse CreateEmptyCloudMediaChangedResponse() =>
+        Duck.Implement<IMediaChangedResponse>(new
+        {
+            Media = Duck.Implement<List<ICloudMediaItem>>(Array.Empty<object>()),
+        });
+
     public static IGetHomeScreenResponse CreateHomeScreenResponseWithEmptyThumbnail() =>
         Duck.Implement<IGetHomeScreenResponse>(new
         {

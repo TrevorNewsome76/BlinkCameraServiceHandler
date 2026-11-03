@@ -102,6 +102,14 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     public ICommandStatusResponse? SystemTriggerDoorbellSnapshot(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/thumbnail", networkId, account.Tier, pollInterval, maxRetries);
 
+    public IMediaChangedResponse? SystemGetRecentMedia(IAuthAccount account, DateTime sinceUtc)
+    {
+        var since = sinceUtc.ToString("yyyy-MM-ddTHH:mm:ss+00:00");
+        var url = $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/media/changed?since={since}&page=1";
+        var result = ApiDriver?.Get(url) ?? string.Empty;
+        return result.Deserialize<IMediaChangedResponse>();
+    }
+
     private static ICommandStatusResponse? TriggerSnapshot(string triggerUrl, long networkId, string tier, TimeSpan? pollInterval, int maxRetries)
     {
         if (ApiDriver is null)

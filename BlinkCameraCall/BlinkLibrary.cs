@@ -9,6 +9,7 @@ namespace BlinkCameraCall;
 public class BlinkLibrary(IAdapter adapter)
 {
     private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
+    private List<ICloudMediaItem>? _lastCloudMedia;
 
     public string Login()
     {
@@ -189,6 +190,38 @@ public class BlinkLibrary(IAdapter adapter)
 
         var path = MediaFileExtension.SaveMediaFile(name, bytes, "jpg", mediaDirectory);
         return $"Saved image to {path}.";
+    }
+
+    public string Videos(string[] arguments)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        var hours = arguments.ExtractHours();
+        var response = adapter.GetRecentMedia(_sessionDetails.Account!, DateTime.UtcNow.AddHours(-hours));
+        _lastCloudMedia = (response?.Media ?? new List<ICloudMediaItem>()).Where(m => !m.Deleted).ToList();
+
+        return _lastCloudMedia.ToCloudMediaListString(hours);
+    }
+
+    public string Download(string[] arguments, string? mediaDirectory = null)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        var id = arguments.ExtractMediaId();
+        var item = _lastCloudMedia?.FirstOrDefault(m => m.Id == id);
+
+        if (item is null)
+            return $"Run VIDEOS first, or '{id}' wasn't in the last VIDEOS list.";
+
+        var url = $"https://rest-{_sessionDetails.Account!.Tier}.immedia-semi.com{item.Media}";
+        var bytes = adapter.DownloadBytes(url);
+        if (bytes is null)
+            return $"Blink did not return a clip for '{id}'.";
+
+        var path = MediaFileExtension.SaveMediaFile(item.Device_Name, bytes, "mp4", mediaDirectory);
+        return $"Saved video to {path}.";
     }
 
     public string Help(string[] arguments)
