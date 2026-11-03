@@ -13,6 +13,7 @@ public class BlinkLibrary(IAdapter adapter)
     public string Login()
     {
         var loginResponse = adapter.Login();
+        _sessionDetails = loginResponse.ConvertToSessionDetails();
 
         if (_sessionDetails.LoggedInStatus)
         {
@@ -64,9 +65,24 @@ public class BlinkLibrary(IAdapter adapter)
 
     public string VerifyPin(string[] arguments)
     {
+        var pinCode = arguments.ExtractPinCode();
+
+        if (!_sessionDetails.LoggedInStatus && _sessionDetails.Verification?.Phone?.Required == true)
+        {
+            var loginResponse = adapter.CompleteTwoFactorLogin(pinCode);
+            _sessionDetails = loginResponse.ConvertToSessionDetails();
+
+            if (_sessionDetails.LoggedInStatus)
+            {
+                adapter.SetAccessToken(_sessionDetails.Auth?.Token ?? string.Empty);
+                return "Login to the Blink Service successful.";
+            }
+
+            return $"Login to the Blink Service failed: {loginResponse.Message}";
+        }
+
         if (_sessionDetails?.Account is not null && _sessionDetails.LoggedInStatus)
         {
-            var pinCode = arguments.ExtractPinCode();
             var setPinResponse = adapter.VerifyPin(_sessionDetails.Account, pinCode);
             return setPinResponse.Message ?? string.Empty;
         }

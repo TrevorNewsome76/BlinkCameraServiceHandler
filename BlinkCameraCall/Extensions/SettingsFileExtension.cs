@@ -12,7 +12,8 @@ public static class SettingsFileExtension
         {
             Email = "test@email.com",
             Password = "PAssword",
-            Baseurl = "https://rest-prod.immedia-semi.com"
+            Baseurl = "https://rest-prod.immedia-semi.com",
+            HardwareId = string.Empty,
         });
 
         if (File.Exists($"{path}settings.json"))
@@ -21,6 +22,7 @@ public static class SettingsFileExtension
         settings.BaseUrl = fileSettings.BaseUrl;
         settings.Email = fileSettings.Email;
         settings.Password = fileSettings.Password;
+        settings.HardwareId = fileSettings.HardwareId ?? string.Empty;
     }
 
     public static void Save(this IBlinkSettings settings, string path) =>

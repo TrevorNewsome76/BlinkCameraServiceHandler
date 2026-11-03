@@ -18,46 +18,55 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
 {
     private static IApiMethods ApiDriver => Shelf.RetrieveInstance<IApiMethods>();
 
+    private static IOAuthLogin OAuthLogin => Shelf.RetrieveInstance<IOAuthLogin>();
+
     private IBlinkSettings BlinkSettings { get; } = settings;
+
+    private string _pendingUsername = settings.Email;
+    private string _pendingPassword = settings.Password;
 
     public bool SetAccessToken(string accessToken) =>
         ApiDriver.SetAccessToken(accessToken);
 
-    public ILoginResponse? AuthLogin()
-    {
-        var parameters = new List<KeyValuePair<string, string>>
-        {
-            new("email",
-                BlinkSettings.Email),
-            new KeyValuePair<string, string>("password",
-                BlinkSettings.Password)
-        };
-
-        var result =
-            ApiDriver
-                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v5/account/login",
-                    parameters);
-
-        return result?.Deserialize<ILoginResponse>() ?? Duck.Implement<ILoginResponse>();
-    }
+    public ILoginResponse? AuthLogin() =>
+        AuthLogin(BlinkSettings.Email, BlinkSettings.Password);
 
     public ILoginResponse? AuthLogin(string username, string password)
     {
-        var parameters = new List<KeyValuePair<string, string>>
-        {
-            new("email",
-                username),
-            new KeyValuePair<string, string>("password",
-                password)
-        };
-
-        var result =
-            ApiDriver
-                .Post($"{BlinkSettings?.BaseUrl ?? string.Empty}/api/v5/account/login",
-                    parameters);
-
-        return result?.Deserialize<ILoginResponse>() ?? Duck.Implement<ILoginResponse>();
+        _pendingUsername = username;
+        _pendingPassword = password;
+        return MapLoginResult(OAuthLogin.Login(username, password, BlinkSettings.HardwareId), username, password);
     }
+
+    public ILoginResponse? AuthCompleteTwoFactorLogin(string code) =>
+        MapLoginResult(OAuthLogin.CompleteTwoFactor(code), _pendingUsername, _pendingPassword);
+
+    private static ILoginResponse MapLoginResult(OAuthLoginResult result, string username, string password) =>
+        Duck.Implement<ILoginResponse>(new
+        {
+            Account = Duck.Implement<IAuthAccount>(new
+            {
+                Account_Id = result.AccountId,
+                Client_Id = result.ClientId,
+                Tier = result.Tier,
+            }),
+            Auth = Duck.Implement<IAuth>(new
+            {
+                Token = result.AccessToken,
+                UserName = username,
+                Password = password,
+            }),
+            Phone = Duck.Implement<IAuthPhone>(new()),
+            Verification = Duck.Implement<IAuthAuthVerification>(new
+            {
+                Phone = Duck.Implement<IVerifyPhone>(new { Required = result.TwoFactorRequired }),
+                Email = Duck.Implement<IVerifyEmail>(new()),
+            }),
+            Force_Password_Reset = false,
+            Allow_Pin_Resend_Seconds = 0,
+            Message = result.Message,
+            Code = result.Success ? 200 : 400,
+        });
 
     public ILogoutResponse? AuthLogout(IAuthAccount account)
     {

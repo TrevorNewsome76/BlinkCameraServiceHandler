@@ -22,15 +22,7 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
     public string Post(string url, List<KeyValuePair<string, string>> parameters)
     {
-        switch (url)
-        {
-            case "https://rest-prod.immedia-semi.com/api/v5/account/login":
-                return (parameters[0].Value == MockSettings.CreateSettings().Email 
-                        && parameters[1].Value == MockSettings.CreateSettings().Password)
-                    ? MockData.AuthLoginCorrectResponse().Serialize()
-                    : MockData.AuthLoginFailedResponse().Serialize();
-            default: throw new NotImplementedException();
-        };
+        throw new NotImplementedException();
     }
 
     public string? Post(string Url, string body)

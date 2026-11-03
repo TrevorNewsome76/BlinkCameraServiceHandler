@@ -199,6 +199,63 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_LoginRequiresTwoFactor_ThenVerifySucceeds()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[]
+        {
+            new string("utwofactor@email.com"),
+            new string("pPAssword"),
+        };
+        var verifyArguments = new[]
+        {
+            new string("v987654"),
+        };
+
+        //act
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        var loginResult = blinkLib.Login(loginArguments);
+        var verifyResult = blinkLib.VerifyPin(verifyArguments);
+
+        //assert
+        loginResult.Should().Contain("failed");
+        loginResult.Should().Contain("two-factor");
+        verifyResult.Should().BeEquivalentTo("Login to the Blink Service successful.");
+
+        //Results
+        output.WriteLine("LoginMessage: {0}", loginResult);
+        output.WriteLine("VerifyMessage: {0}", verifyResult);
+    }
+
+    [Fact]
+    public void Test_LoginRequiresTwoFactor_ThenVerifyFailsWithWrongCode()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[]
+        {
+            new string("utwofactor@email.com"),
+            new string("pPAssword"),
+        };
+        var verifyArguments = new[]
+        {
+            new string("v000000"),
+        };
+
+        //act
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var verifyResult = blinkLib.VerifyPin(verifyArguments);
+
+        //assert
+        verifyResult.Should().Contain("failed");
+
+        //Results
+        output.WriteLine("VerifyMessage: {0}", verifyResult);
+    }
+
+    [Fact]
     public void Test_VerifyPinFailedNotLoggedIn()
     {
         //assign

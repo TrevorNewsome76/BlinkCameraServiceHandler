@@ -20,6 +20,12 @@ namespace BlinkCameraCall
             var settings = Duck.Implement<IBlinkSettings>(new());
             settings.Load($"{AppContext.BaseDirectory}");
 
+            if (string.IsNullOrEmpty(settings.HardwareId))
+            {
+                settings.HardwareId = Guid.NewGuid().ToString().ToUpperInvariant();
+                settings.Save($"{AppContext.BaseDirectory}");
+            }
+
             //Console.SetCursorPosition(0, 1);
 
             

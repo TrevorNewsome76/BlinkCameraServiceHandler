@@ -18,6 +18,9 @@ public static class AdapterExtension
     public static ILoginResponse Login(this IAdapter adapter, string username, string password) =>
         Transactions.AuthLogin(username, password) ?? Duck.Implement<ILoginResponse>(new());
 
+    public static ILoginResponse CompleteTwoFactorLogin(this IAdapter adapter, string code) =>
+        Transactions.AuthCompleteTwoFactorLogin(code) ?? Duck.Implement<ILoginResponse>(new());
+
     public static void SetAccessToken(this IAdapter adapter, string token) =>
         Transactions.SetAccessToken(token);
 

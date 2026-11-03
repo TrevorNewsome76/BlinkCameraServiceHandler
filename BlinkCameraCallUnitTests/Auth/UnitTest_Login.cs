@@ -37,10 +37,11 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_FailedLogin()
         {
             //assign
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
             var expected = MockData.AuthLoginFailedResponse();
 
             //act
-            var actualResult = BlinkAdapter?.AuthLogin("blah", "blah") 
+            var actualResult = BlinkAdapter?.AuthLogin("blah", "blah")
                                ?? Duck.Implement<ILoginResponse>(new());
 
             //assert
@@ -54,6 +55,7 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_SetAccessTokenToNulAndFail()
         {
             // assign
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
 
             // act
             var actualResult = BlinkAdapter?.SetAccessToken(null!);
@@ -66,6 +68,7 @@ namespace BlinkCameraCallUnitTests.Auth
         public void Test_SetAccessTokenToValueAndPass()
         {
             // assign
+            var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
 
             // act
             var actualResult = BlinkAdapter?.SetAccessToken("BU8fOjaF4E5POf4WTRm5wA");

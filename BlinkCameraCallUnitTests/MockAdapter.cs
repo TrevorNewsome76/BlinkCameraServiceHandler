@@ -10,6 +10,7 @@ public class MockAdapter : IAdapter
     {
         Shelf.Clear();
         Shelf.ShelveInstance(MockApiDriver.MockHttpClientApiDriver());
+        Shelf.ShelveInstance(MockApiDriver.MockOAuthLoginDriver());
         Shelf.ShelveInstance(ApiInterface.Initialize(configuration));
     }
 }

@@ -35,7 +35,8 @@ internal class HttpClientApiHandler : IApiMethods, IDisposable
     public bool SetAccessToken(string accessToken)
     {
         _httpClient.DefaultRequestHeaders.Clear();
-        return _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("TOKEN_AUTH", accessToken);
+        _httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        return _httpClient.DefaultRequestHeaders.TryAddWithoutValidation("Authorization", $"Bearer {accessToken}");
     }
 
     public string Post(string url, List<KeyValuePair<string, string>> parameters) =>

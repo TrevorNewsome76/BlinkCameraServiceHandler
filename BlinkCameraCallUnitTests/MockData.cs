@@ -10,24 +10,78 @@ public static class MockData
     public static ILoginResponse AuthLoginCorrectResponse() =>
         Duck.Implement<ILoginResponse>(new
         {
-            Account = ValidAccount(),
-            Auth = ValidAuth(),
-            Phone = ValidPhone(),
-            Verification = ValidVerification(),
-            Lockout_time_Remaining = 0,
+            Account = Duck.Implement<IAuthAccount>(new
+            {
+                Account_Id = 134166,
+                Client_Id = 1486061,
+                Tier = "007",
+            }),
+            Auth = Duck.Implement<IAuth>(new
+            {
+                Token = "BU8fOjaF4E5POf4WTRm5wA",
+                UserName = "test@email.com",
+                Password = "PAssword",
+            }),
+            Phone = Duck.Implement<IAuthPhone>(new()),
+            Verification = Duck.Implement<IAuthAuthVerification>(new
+            {
+                Phone = Duck.Implement<IVerifyPhone>(new { Required = false }),
+                Email = Duck.Implement<IVerifyEmail>(new()),
+            }),
             Force_Password_Reset = false,
-            Allow_Pin_Resend_Seconds = 90
+            Allow_Pin_Resend_Seconds = 0,
+            Message = "Login successful",
+            Code = 200,
         });
 
-    public static ILoginResponse AuthLoginFailedResponse() =>
+    public static ILoginResponse AuthLoginFailedResponse(string username = "blah", string password = "blah") =>
         Duck.Implement<ILoginResponse>(new
         {
-            Lockout_time_Remaining = 0,
+            Account = Duck.Implement<IAuthAccount>(new
+            {
+                Tier = string.Empty,
+            }),
+            Auth = Duck.Implement<IAuth>(new
+            {
+                Token = string.Empty,
+                UserName = username,
+                Password = password,
+            }),
+            Phone = Duck.Implement<IAuthPhone>(new()),
+            Verification = Duck.Implement<IAuthAuthVerification>(new
+            {
+                Phone = Duck.Implement<IVerifyPhone>(new { Required = false }),
+                Email = Duck.Implement<IVerifyEmail>(new()),
+            }),
             Force_Password_Reset = false,
             Allow_Pin_Resend_Seconds = 0,
             Message = "Invalid credentials",
-            Code = 200,
+            Code = 400,
         });
+
+    public static OAuthLoginResult OAuthLoginCorrectResult() => new()
+    {
+        Success = true,
+        AccessToken = "BU8fOjaF4E5POf4WTRm5wA",
+        RefreshToken = "mock-refresh-token",
+        Tier = "007",
+        AccountId = 134166,
+        ClientId = 1486061,
+        Message = "Login successful",
+    };
+
+    public static OAuthLoginResult OAuthLoginFailedResult() => new()
+    {
+        Success = false,
+        Message = "Invalid credentials",
+    };
+
+    public static OAuthLoginResult OAuthLoginTwoFactorRequiredResult() => new()
+    {
+        Success = false,
+        TwoFactorRequired = true,
+        Message = "Blink sent a two-factor verification code to complete login; use VERIFY -v<code> to enter it.",
+    };
 
     public static ILogoutResponse AuthLogoutCorrectResponse() =>
         Duck.Implement<ILogoutResponse>(new
