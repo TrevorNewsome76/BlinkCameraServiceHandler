@@ -22,6 +22,16 @@ public static class CommandProcessorExtension
         "localdownload",
         "help",
         "exit",
+        "cd",
+        "ls",
+        "trigger",
+    };
+
+    private static readonly string[] BarePositionalCommands = new[]
+    {
+        "cd",
+        "ls",
+        "trigger",
     };
 
     public static ICommandAndArguments ProcessCommandString(this string consoleCommand)
@@ -41,8 +51,32 @@ public static class CommandProcessorExtension
                 });
         }
 
+        var verbEnd = consoleCommand.IndexOf(' ');
+        var verb = verbEnd < 0 ? consoleCommand : consoleCommand[..verbEnd];
+        var remainder = verbEnd < 0 ? string.Empty : consoleCommand[(verbEnd + 1)..].Trim();
+
+        if (BarePositionalCommands.Contains(verb.ToLower()))
+        {
+            return CreateBareReturnObject(verb, remainder, bareDownload: false).ValidateCommand();
+        }
+
+        if (verb.Equals("download", StringComparison.OrdinalIgnoreCase)
+            && remainder.Length > 0
+            && !remainder.StartsWith('-'))
+        {
+            return CreateBareReturnObject(verb, remainder, bareDownload: true).ValidateCommand();
+        }
+
         return CreateReturnObject(consoleCommand.Split(" -")).ValidateCommand();
     }
+
+    private static ICommandAndArguments CreateBareReturnObject(string command, string target, bool bareDownload) =>
+        Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = command,
+            Arguments = new[] { target },
+            BareDownload = bareDownload,
+        });
 
     private static ICommandAndArguments CreateReturnObject(string[] commandAndArguments) =>
         (commandAndArguments.Length > 1) 
