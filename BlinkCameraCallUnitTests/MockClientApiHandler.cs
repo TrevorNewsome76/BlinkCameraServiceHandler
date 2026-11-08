@@ -69,6 +69,10 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":900}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/504/local_storage/manifest/702/clip/request/2":
                 return "{\"id\":801}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/sync_modules/390959/local_storage/manifest/request":
+                return "{\"id\":610}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/sync_modules/390959/local_storage/manifest/710/clip/request/11":
+                return "{\"id\":920}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }
@@ -103,6 +107,13 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":900,\"network_id\":1,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/1/command/801":
                 return "{\"id\":801,\"network_id\":1,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/sync_modules/390959/local_storage/manifest/request/610":
+                return "{\"manifest_id\":710,\"clips\":[" +
+                    "{\"id\":11,\"camera_name\":\"Pergoda\",\"created_at\":\"2026-11-02T08:00:00+00:00\",\"size\":5555}," +
+                    "{\"id\":12,\"camera_name\":\"Pergoda\",\"created_at\":\"2026-11-01T12:00:00+00:00\",\"size\":4444}," +
+                    "{\"id\":13,\"camera_name\":\"Garage\",\"created_at\":\"2026-11-01T09:00:00+00:00\",\"size\":2222}]}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/920":
+                return "{\"id\":920,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
                 HomeScreenCallCount++;
                 return MockData.CreateValidHomeScreenResponse().Serialize();
@@ -127,6 +138,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 global::System.Text.Encoding.UTF8.GetBytes("fake-mp4-bytes"),
             "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/700/clip/request/1" =>
                 global::System.Text.Encoding.UTF8.GetBytes("fake-local-mp4-bytes"),
+            "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/sync_modules/390959/local_storage/manifest/710/clip/request/11" =>
+                global::System.Text.Encoding.UTF8.GetBytes("fake-local-mp4-bytes-2"),
             _ => throw new NotImplementedException()
         };
     }

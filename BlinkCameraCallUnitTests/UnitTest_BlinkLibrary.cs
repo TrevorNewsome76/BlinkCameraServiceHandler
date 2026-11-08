@@ -1,8 +1,10 @@
 ﻿using BlinkCameraCall;
 using BlinkCameraCall.Extensions;
 using BlinkCommon.Interfaces;
+using BlinkCommon.Interfaces.System;
 using Dependency;
 using FluentAssertions;
+using Shadow.Quack;
 using Xunit.Abstractions;
 
 namespace BlinkCameraCallUnitTests;
@@ -1124,5 +1126,95 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
 
         //Results
         output.WriteLine(exception.Message);
+    }
+
+    [Fact]
+    public void Test_CurrentSession_NotLoggedIn_ReturnsNull()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+
+        //act
+        var actualResult = blinkLib.CurrentSession;
+
+        //assert
+        actualResult.Should().BeNull();
+    }
+
+    [Fact]
+    public void Test_CurrentSession_LoggedIn_ReturnsSessionDetails()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+
+        //act
+        var actualResult = blinkLib.CurrentSession;
+
+        //assert
+        actualResult.Should().NotBeNull();
+        actualResult!.LoggedInStatus.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Test_ListDeviceMedia_MergesCurrentCloudAndLocal_DeduplicatesCollidingNames()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var camera = MockData.CreateValidHomeScreenCameras()[0];
+
+        //act
+        var result = blinkLib.ListDeviceMedia("Pergoda", camera, null, TimeSpan.Zero, 3);
+
+        //assert
+        result.Entries.Should().HaveCount(4);
+        result.Entries.Should().Contain(e => e.Name == "current" && e.Kind == DeviceMediaKind.Current);
+        result.Entries.Should().Contain(e => e.Name == "2026-11-01_12-00-00" && e.Kind == DeviceMediaKind.Cloud);
+        result.Entries.Should().Contain(e => e.Name == "2026-11-02_08-00-00" && e.Kind == DeviceMediaKind.Local);
+        result.Entries.Should().Contain(e => e.Name == "2026-11-01_12-00-00_12" && e.Kind == DeviceMediaKind.Local);
+        result.Entries.Should().NotContain(e => e.LocalClip != null && e.LocalClip.Camera_Name == "Garage");
+    }
+
+    [Fact]
+    public void Test_ListDeviceMedia_NoThumbnail_NoCloudMatch_NoSyncModuleForNetwork_ReturnsEmptyEntries()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var orphanCamera = Duck.Implement<IHomeScreenCamera>(new { id = 99999L, Name = "Orphan Cam", Network_Id = 555555L, Thumbnail = "" });
+
+        //act
+        var result = blinkLib.ListDeviceMedia("Orphan Cam", orphanCamera, null, TimeSpan.Zero, 3);
+
+        //assert
+        result.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Test_ListDeviceMedia_SyncModuleInactive_SkipsLocalSection_ButKeepsCurrent()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var backCamera = Duck.Implement<IHomeScreenCamera>(new { id = 99998L, Name = "Back Cam", Network_Id = 263310L, Thumbnail = "/some/thumb.jpg" });
+
+        //act
+        var result = blinkLib.ListDeviceMedia("Back Cam", backCamera, null, TimeSpan.Zero, 3);
+
+        //assert
+        result.Entries.Should().ContainSingle(e => e.Name == "current" && e.Kind == DeviceMediaKind.Current);
     }
 }
