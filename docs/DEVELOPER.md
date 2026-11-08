@@ -470,16 +470,25 @@ constructor-injected, one instance for the process.
   the same "construct a fake at the seam" approach `CommandPolling`/
   `ManifestPolling` already use for their own injectable timing (§7.3,
   §7.6), applied here to console I/O instead of HTTP polling.
-- **`ShellSession`'s device-media cache has one invalidation rule: a fresh
-  `LS` always replaces it, and it's keyed by device name.** `DownloadByName`
-  refuses to run (`"Run LS first."`) unless the cached listing's device
-  name still matches the device you're currently `cd`'d into — so `cd`-ing
-  away and back, or `cd`-ing to a different device, invalidates the old
-  listing even though the cache itself was never explicitly cleared on
-  `cd`. This mirrors the existing "stale manifest" guard `LOCALDOWNLOAD`
-  already has against `LOCALCLIPS` (§7.6), but scoped to `ShellSession`
-  instead of `BlinkLibrary` — it's navigation-session state, not account
-  state, so it doesn't belong on `_sessionDetails`.
+- **`ShellSession`'s device-media cache is explicitly cleared whenever you
+  leave the current device, not detected as stale by comparison.**
+  `ChangeDirectory` calls `ClearDeviceState()` (which nulls both
+  `_lastDeviceMediaListing` and `_lastDeviceMediaListingFor`) on `cd ..` from
+  a device and on `cd \`/`cd /`/bare `cd`, and `ClearAllState()` (which
+  calls `ClearDeviceState()` too) on `cd ..` from a hub. Because the branch
+  that assigns a new `_currentDeviceName` is only reachable when
+  `_currentDeviceName` is already `null`, you can never land in a *different*
+  device without first passing through one of these clears — so a fresh `LS`
+  always replaces the cache, and a following `DownloadByName` for a
+  previous device's entry is already impossible by construction, not caught
+  after the fact. The `_lastDeviceMediaListingFor != _currentDeviceName`
+  check `DownloadByName` still does is a defensive backstop (and what
+  actually produces `"Run LS first."` when no `LS` has run yet in the
+  current device), not the mechanism doing the day-to-day invalidation
+  work. This is a different shape from `LOCALDOWNLOAD`'s guard against a
+  stale `LOCALCLIPS` manifest (§7.6), which *is* a real by-comparison
+  staleness check, because `BlinkLibrary` has no equivalent "leaving a
+  sync module" event to clear on.
 
 ## 8. How an access token is actually used after login
 
