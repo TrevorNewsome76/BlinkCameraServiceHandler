@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("BlinkCameraCall")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+cede7fb5c14df02a5b228e803fba2e98102e5378")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6a353f1203e97b892436ab4f40560b400da84200")]
 [assembly: System.Reflection.AssemblyProductAttribute("BlinkCameraCall")]
 [assembly: System.Reflection.AssemblyTitleAttribute("BlinkCameraCall")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

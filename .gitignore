@@ -90,3 +90,5 @@ BlinkCameraCall/settings.json
 *.Up2Date
 *.bin
 .superpowers/
+/BlinkCameraCall/bin
+/BlinkCameraCall/obj
