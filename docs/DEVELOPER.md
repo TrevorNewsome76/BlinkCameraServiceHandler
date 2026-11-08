@@ -472,10 +472,11 @@ constructor-injected, one instance for the process.
   §7.6), applied here to console I/O instead of HTTP polling.
 - **`ShellSession`'s device-media cache is explicitly cleared whenever you
   leave the current device, not detected as stale by comparison.**
-  `ChangeDirectory` calls `ClearDeviceState()` (which nulls both
-  `_lastDeviceMediaListing` and `_lastDeviceMediaListingFor`) on `cd ..` from
-  a device and on `cd \`/`cd /`/bare `cd`, and `ClearAllState()` (which
-  calls `ClearDeviceState()` too) on `cd ..` from a hub. Because the branch
+  `ChangeDirectory` calls `ClearDeviceState()` directly (which nulls both
+  `_lastDeviceMediaListing` and `_lastDeviceMediaListingFor`) only on `cd ..`
+  from a device, and calls `ClearAllState()` (which calls `ClearDeviceState()`
+  too) on both `cd ..` from a hub and on bare `cd`/`cd \`/`cd /` from any
+  level. Because the branch
   that assigns a new `_currentDeviceName` is only reachable when
   `_currentDeviceName` is already `null`, you can never land in a *different*
   device without first passing through one of these clears — so a fresh `LS`
