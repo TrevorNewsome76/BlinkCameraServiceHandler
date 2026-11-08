@@ -328,7 +328,7 @@ public class BlinkLibrary(IAdapter adapter)
 
         var cloudMedia = adapter.GetRecentMedia(_sessionDetails.Account!, DateTime.UtcNow.AddHours(-24))?.Media ?? new List<ICloudMediaItem>();
         foreach (var item in cloudMedia.Where(m => !m.Deleted && string.Equals(m.Device_Name, deviceName, StringComparison.OrdinalIgnoreCase)))
-            entries.Add(new DeviceMediaEntry(item.Created_At.ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Cloud, item.Created_At, item, null, null, null));
+            entries.Add(new DeviceMediaEntry(item.Created_At.ToUniversalTime().ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Cloud, item.Created_At, item, null, null, null));
 
         var networkId = camera?.Network_Id ?? doorbell!.Network_Id;
         var syncModule = _sessionDetails.SyncModules?.FirstOrDefault(s => s.Network_Id == networkId.ToString());
@@ -345,7 +345,7 @@ public class BlinkLibrary(IAdapter adapter)
             {
                 var clips = manifestResult.Clips ?? new List<ILocalStorageClip>();
                 foreach (var clip in clips.Where(c => string.Equals(c.Camera_Name, deviceName, StringComparison.OrdinalIgnoreCase)))
-                    entries.Add(new DeviceMediaEntry(clip.Created_At.ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Local, clip.Created_At, null, clip, syncModule, manifestResult.Manifest_Id));
+                    entries.Add(new DeviceMediaEntry(clip.Created_At.ToUniversalTime().ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Local, clip.Created_At, null, clip, syncModule, manifestResult.Manifest_Id));
             }
         }
 

@@ -557,4 +557,86 @@ public class UnitTest_ShellSession
                 Directory.Delete(mediaDirectory, recursive: true);
         }
     }
+
+    [Fact]
+    public void Test_DownloadByName_Current_ReflectsThumbnailAfterTrigger()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Front");
+        shellSession.ChangeDirectory("Pergoda");
+        shellSession.List(TimeSpan.Zero, 1);
+        var mediaDirectory = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+        try
+        {
+            // Trigger() re-fetches the home screen, which (per the mock's HomeScreenCallCount
+            // pattern) now returns Pergoda with a new Thumbnail. DownloadByName must resolve the
+            // camera fresh instead of using the object cached at cd-time, or this would download
+            // the stale thumbnail from before the trigger.
+            shellSession.Trigger(TimeSpan.Zero, 1);
+
+            //act
+            var actualResult = shellSession.DownloadByName("current", mediaDirectory: mediaDirectory);
+
+            //assert
+            actualResult.Should().StartWith("Saved image to ");
+            var path = actualResult["Saved image to ".Length..].TrimEnd('.');
+            File.Exists(path).Should().BeTrue();
+            File.ReadAllText(path).Should().Be("fake-jpeg-bytes-updated");
+        }
+        finally
+        {
+            if (Directory.Exists(mediaDirectory))
+                Directory.Delete(mediaDirectory, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Test_DownloadByName_NotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Front");
+        shellSession.ChangeDirectory("Pergoda");
+        shellSession.List(TimeSpan.Zero, 3);
+        blinkLib.Logout();
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = shellSession.DownloadByName("current");
+
+        //assert
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Test_Prompt_ResetsAfterLogout()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Front");
+        shellSession.ChangeDirectory("Pergoda");
+        blinkLib.Logout();
+
+        //act
+        // List()'s not-logged-in branch is what clears navigation state; Prompt itself doesn't
+        // proactively recompute off CurrentSession.
+        shellSession.List();
+
+        //assert
+        shellSession.Prompt.Should().Be("BC>");
+    }
 }

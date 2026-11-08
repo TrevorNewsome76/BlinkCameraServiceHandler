@@ -6,8 +6,6 @@ namespace BlinkCameraCall;
 public class ShellSession(BlinkLibrary library)
 {
     private IHomeScreenNetwork? _currentNetwork;
-    private IHomeScreenCamera? _currentCamera;
-    private IHomeScreenDoorbells? _currentDoorbell;
     private string? _currentDeviceName;
 
     private DeviceMediaListing? _lastDeviceMediaListing;
@@ -21,7 +19,10 @@ public class ShellSession(BlinkLibrary library)
     public string ChangeDirectory(string target)
     {
         if (library.CurrentSession is null)
+        {
+            ClearAllState();
             return "Not currently logged into Blink service.";
+        }
 
         var trimmedTarget = target.Trim();
 
@@ -66,6 +67,28 @@ public class ShellSession(BlinkLibrary library)
             return $"Now in hub '{network.Name}'.";
         }
 
+        var (camera, doorbell) = FindDeviceInCurrentNetwork(target);
+        var matchCount = (camera is not null ? 1 : 0) + (doorbell is not null ? 1 : 0);
+
+        if (matchCount != 1)
+            return $"No device named '{target}' was found. Run LS to see exact names.";
+
+        _currentDeviceName = camera?.Name ?? doorbell!.Name;
+
+        return $"Now in device '{_currentDeviceName}'.";
+    }
+
+    /// <summary>
+    /// Resolves a device by name within <see cref="_currentNetwork"/>, the same lookup
+    /// <see cref="ChangeDirectory"/> uses to validate a `cd` target. Used by anything that
+    /// needs the current device fresh (rather than a cached reference that can go stale
+    /// after a Trigger/Snap re-fetches the home screen).
+    /// </summary>
+    private (IHomeScreenCamera? Camera, IHomeScreenDoorbells? Doorbell) FindDeviceInCurrentNetwork(string name)
+    {
+        if (_currentNetwork is null || library.CurrentSession is null)
+            return (null, null);
+
         var networkCameras = (library.CurrentSession.Cameras ?? new List<IHomeScreenCamera>())
             .Where(c => c.Network_Id == _currentNetwork.Id)
             .ToList();
@@ -73,28 +96,35 @@ public class ShellSession(BlinkLibrary library)
             .Where(d => d.Network_Id == _currentNetwork.Id)
             .ToList();
 
-        var matchingCameras = networkCameras.Where(c => string.Equals(c.Name, target, StringComparison.OrdinalIgnoreCase)).ToList();
-        var matchingDoorbells = networkDoorbells.Where(d => string.Equals(d.Name, target, StringComparison.OrdinalIgnoreCase)).ToList();
-        var matchCount = matchingCameras.Count + matchingDoorbells.Count;
+        var matchingCameras = networkCameras.Where(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)).ToList();
+        var matchingDoorbells = networkDoorbells.Where(d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase)).ToList();
 
-        if (matchCount != 1)
-            return $"No device named '{target}' was found. Run LS to see exact names.";
+        var camera = matchingCameras.Count == 1 ? matchingCameras[0] : null;
+        var doorbell = matchingDoorbells.Count == 1 ? matchingDoorbells[0] : null;
 
-        _currentCamera = matchingCameras.Count == 1 ? matchingCameras[0] : null;
-        _currentDoorbell = matchingDoorbells.Count == 1 ? matchingDoorbells[0] : null;
-        _currentDeviceName = _currentCamera?.Name ?? _currentDoorbell!.Name;
-
-        return $"Now in device '{_currentDeviceName}'.";
+        return (camera, doorbell);
     }
+
+    /// <summary>
+    /// Resolves the camera/doorbell for <see cref="_currentDeviceName"/> fresh from
+    /// <see cref="library"/>.CurrentSession, so callers always see the latest Thumbnail/state
+    /// (e.g. after a Trigger) instead of whatever was current at `cd` time.
+    /// </summary>
+    private (IHomeScreenCamera? Camera, IHomeScreenDoorbells? Doorbell) ResolveCurrentDevice() =>
+        _currentDeviceName is null ? (null, null) : FindDeviceInCurrentNetwork(_currentDeviceName);
 
     public string List(TimeSpan? pollInterval = null, int maxRetries = 120)
     {
         if (library.CurrentSession is null)
+        {
+            ClearAllState();
             return "Not currently logged into Blink service.";
+        }
 
         if (_currentDeviceName is not null)
         {
-            _lastDeviceMediaListing = library.ListDeviceMedia(_currentDeviceName!, _currentCamera, _currentDoorbell, pollInterval, maxRetries);
+            var (camera, doorbell) = ResolveCurrentDevice();
+            _lastDeviceMediaListing = library.ListDeviceMedia(_currentDeviceName!, camera, doorbell, pollInterval, maxRetries);
             _lastDeviceMediaListingFor = _currentDeviceName;
             return _lastDeviceMediaListing.ToListingString();
         }
@@ -131,6 +161,12 @@ public class ShellSession(BlinkLibrary library)
 
     public string DownloadByName(string name, TimeSpan? pollInterval = null, int maxRetries = 120, string? mediaDirectory = null)
     {
+        if (library.CurrentSession is null)
+        {
+            ClearAllState();
+            return "Not currently logged into Blink service.";
+        }
+
         if (_currentDeviceName is null)
             return "Not in a device directory. cd into a camera or doorbell first.";
 
@@ -143,9 +179,14 @@ public class ShellSession(BlinkLibrary library)
         if (entry is null)
             return $"'{name}' wasn't in the last LS output.";
 
+        if (entry.Kind == DeviceMediaKind.Current)
+        {
+            var (camera, doorbell) = ResolveCurrentDevice();
+            return library.DownloadCurrentThumbnail(_currentDeviceName!, camera, doorbell, mediaDirectory);
+        }
+
         return entry.Kind switch
         {
-            DeviceMediaKind.Current => library.DownloadCurrentThumbnail(_currentDeviceName!, _currentCamera, _currentDoorbell, mediaDirectory),
             DeviceMediaKind.Cloud => library.DownloadCloudItem(entry.CloudItem!, mediaDirectory),
             DeviceMediaKind.Local => library.DownloadLocalClip(entry.SyncModule!, entry.ManifestId!.Value, entry.LocalClip!, pollInterval, maxRetries, mediaDirectory),
             _ => $"'{name}' wasn't in the last LS output.",
@@ -160,8 +201,6 @@ public class ShellSession(BlinkLibrary library)
 
     private void ClearDeviceState()
     {
-        _currentCamera = null;
-        _currentDoorbell = null;
         _currentDeviceName = null;
         _lastDeviceMediaListing = null;
         _lastDeviceMediaListingFor = null;

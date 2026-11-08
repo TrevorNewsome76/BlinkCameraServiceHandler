@@ -39,7 +39,25 @@ namespace BlinkCameraCall
             {
                 try
                 {
-                    var command = shellLineEditor.ReadLine(shellSession.Prompt).ProcessCommandString();
+                    string? rawLine;
+                    if (Console.IsInputRedirected || Console.IsOutputRedirected)
+                    {
+                        Console.Write(shellSession.Prompt);
+                        rawLine = Console.ReadLine();
+
+                        if (rawLine is null)
+                        {
+                            Console.WriteLine();
+                            Console.WriteLine("Goodbye");
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        rawLine = shellLineEditor.ReadLine(shellSession.Prompt);
+                    }
+
+                    var command = rawLine.ProcessCommandString();
 
                     if (!string.IsNullOrEmpty(command.Message))
                     {
@@ -47,7 +65,7 @@ namespace BlinkCameraCall
                     }
                     else
                     {
-                        switch (command.Command)
+                        switch (command.Command.ToLowerInvariant())
                         {
                             case "login":
                                 Console.WriteLine(command?.Arguments is null

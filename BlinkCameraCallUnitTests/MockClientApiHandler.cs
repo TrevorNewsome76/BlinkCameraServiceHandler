@@ -116,7 +116,9 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":920,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
                 HomeScreenCallCount++;
-                return MockData.CreateValidHomeScreenResponse().Serialize();
+                return (HomeScreenCallCount > 1
+                    ? MockData.CreateValidHomeScreenResponseWithUpdatedThumbnail()
+                    : MockData.CreateValidHomeScreenResponse()).Serialize();
             case "https://rest-007.immedia-semi.com/api/v3/accounts/999999/homescreen":
                 return MockData.CreateHomeScreenResponseWithEmptyThumbnail().Serialize();
             case "https://rest-007.immedia-semi.com/network/263178/command/500":
@@ -134,6 +136,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
         {
             "https://rest-007.immedia-semi.com/api/v3/media/accounts/239361/networks/263178/catalina/321343/thumbnail/thumbnail.jpg?ts=1705051738&ext=" =>
                 global::System.Text.Encoding.UTF8.GetBytes("fake-jpeg-bytes"),
+            "https://rest-007.immedia-semi.com/api/v3/media/accounts/239361/networks/263178/catalina/321343/thumbnail/thumbnail.jpg?ts=1705099999&ext=" =>
+                global::System.Text.Encoding.UTF8.GetBytes("fake-jpeg-bytes-updated"),
             "https://rest-007.immedia-semi.com/media/clip1.mp4" =>
                 global::System.Text.Encoding.UTF8.GetBytes("fake-mp4-bytes"),
             "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/700/clip/request/1" =>
