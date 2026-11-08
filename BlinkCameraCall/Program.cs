@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.Design;
 using BlinkCameraCall.Extensions;
+using BlinkCameraCall.IO;
 using BlinkCameraCallUnitTests.Extensions;
 using BlinkCommon.Interfaces;
 
@@ -30,13 +31,15 @@ namespace BlinkCameraCall
 
             
             var blinkLibrary = new BlinkLibrary(new BlinkAdapter(settings));
+            var shellLineEditor = new ShellLineEditor(new SystemConsoleIO());
+            var shellSession = new ShellSession(blinkLibrary);
 
             bool quitNow = false;
             while (!quitNow)
             {
                 try
                 {
-                    var command = (Console.ReadLine() ?? string.Empty).ProcessCommandString();
+                    var command = shellLineEditor.ReadLine(shellSession.Prompt).ProcessCommandString();
 
                     if (!string.IsNullOrEmpty(command.Message))
                     {
@@ -81,8 +84,19 @@ namespace BlinkCameraCall
                             case "videos":
                                 Console.WriteLine(blinkLibrary.Videos(command.Arguments));
                                 break;
+                            case "cd":
+                                Console.WriteLine(shellSession.ChangeDirectory(command.Arguments![0]));
+                                break;
+                            case "ls":
+                                Console.WriteLine(shellSession.List());
+                                break;
+                            case "trigger":
+                                Console.WriteLine(shellSession.Trigger());
+                                break;
                             case "download":
-                                Console.WriteLine(blinkLibrary.Download(command.Arguments));
+                                Console.WriteLine(command.BareDownload
+                                    ? shellSession.DownloadByName(command.Arguments![0])
+                                    : blinkLibrary.Download(command.Arguments));
                                 break;
                             case "localclips":
                                 Console.WriteLine(blinkLibrary.LocalClips(command.Arguments));
@@ -101,6 +115,10 @@ namespace BlinkCameraCall
                                 Console.WriteLine("IMAGE -n<name>                   Downloads a device's current thumbnail to media/.");
                                 Console.WriteLine("VIDEOS -h<hours>                 Lists recent cloud video events (default 24h).");
                                 Console.WriteLine("DOWNLOAD -i<id>                  Downloads a cloud clip (id from VIDEOS) to media/.");
+                                Console.WriteLine("CD <name>|..|\\                   Changes directory between hubs and devices.");
+                                Console.WriteLine("LS                                Lists hubs, devices, or a device's media, depending on where you are.");
+                                Console.WriteLine("TRIGGER                          Takes a fresh snapshot of the current device (cd into one first).");
+                                Console.WriteLine("DOWNLOAD <name>                  Downloads a media item by the name LS showed (device directory only).");
                                 Console.WriteLine("LOCALCLIPS -n<syncmodule>        Lists a sync module's SD-card manifest.");
                                 Console.WriteLine("LOCALDOWNLOAD -i<id> -n<sync>    Downloads an SD-card clip (id from LOCALCLIPS) to media/.");
                                 Console.WriteLine("VERIFY -v<code>                     Verifies sms pin number sent after new login.");

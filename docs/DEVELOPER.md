@@ -435,6 +435,52 @@ local-storage flow has after downloading. Silently deleting footage off
 someone's physical SD card by default is a worse failure mode than making
 them delete it from the Blink app if they want the space back.
 
+### 7.7 The shell navigation layer (CD/LS/TRIGGER, bare DOWNLOAD)
+
+`CD`/`LS`/`TRIGGER` and a bare `DOWNLOAD <name>` (as opposed to the legacy
+`DOWNLOAD -i<id>`) let the REPL feel like a PowerShell session: a prompt
+that tracks where you are, and commands that act on "the current device"
+instead of repeating its name every time. All of this lives in
+`ShellSession` (top-level in `BlinkCameraCall`), which wraps a
+`BlinkLibrary` the same way `BlinkLibrary` itself wraps `IAdapter` —
+constructor-injected, one instance for the process.
+
+- **Hubs are `Network`s, not `SyncModule`s.** A network's directly-attached
+  cameras/doorbells all appear under it in `CD`/`LS` even when some don't
+  route through a sync module at all (Blink Minis use none, and stay
+  unmodeled here the same way `MAP` leaves them as a bare count — see §10).
+  Modeling the tree on `Network` rather than `SyncModule` means `LS` at the
+  hub level doesn't have to special-case a network with zero or multiple
+  sync modules.
+- **Bare-positional parsing lives alongside the existing `" -"`-splitting
+  path, not instead of it.** `CommandProcessorExtension.FormatCommand`
+  checks `verb` against a small `BarePositionalCommands` set (`cd`, `ls`,
+  `trigger`) *before* ever reaching the old `consoleCommand.Split(" -")`
+  logic, and `download` gets its own one-off check (non-empty remainder
+  that doesn't start with `-`) that sets the new `ICommandAndArguments.
+  BareDownload` flag. Every verb that doesn't match either check falls
+  through to the untouched legacy path, so none of the pre-existing
+  flag-command tests needed to change.
+- **`ShellLineEditor`/`IConsoleIO` exist purely as a testability seam.**
+  `IConsoleIO` (`ReadKey`, `Write`, `CursorLeft`/`CursorTop`,
+  `WindowWidth`) is the only thing `ShellLineEditor` touches; `Program.cs`
+  wires it to the real console via `SystemConsoleIO`, while
+  `UnitTest_ShellLineEditor` drives it against a hand-rolled fake that
+  queues `ConsoleKeyInfo` values and records every `Write`/cursor move —
+  the same "construct a fake at the seam" approach `CommandPolling`/
+  `ManifestPolling` already use for their own injectable timing (§7.3,
+  §7.6), applied here to console I/O instead of HTTP polling.
+- **`ShellSession`'s device-media cache has one invalidation rule: a fresh
+  `LS` always replaces it, and it's keyed by device name.** `DownloadByName`
+  refuses to run (`"Run LS first."`) unless the cached listing's device
+  name still matches the device you're currently `cd`'d into — so `cd`-ing
+  away and back, or `cd`-ing to a different device, invalidates the old
+  listing even though the cache itself was never explicitly cleared on
+  `cd`. This mirrors the existing "stale manifest" guard `LOCALDOWNLOAD`
+  already has against `LOCALCLIPS` (§7.6), but scoped to `ShellSession`
+  instead of `BlinkLibrary` — it's navigation-session state, not account
+  state, so it doesn't belong on `_sessionDetails`.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per
@@ -513,6 +559,21 @@ or deliberately decide to still skip:
 - **The `media/changed` response shape behind `VIDEOS`/`DOWNLOAD` (§7.5) is a
   reconstruction, not a confirmed live response.** Expect it to need the same
   live-error-driven field-name fix the OAuth rewrite needed for login.
+- **No persisted command history across runs.** `ShellLineEditor`'s Up/Down
+  recall (§7.7) is in-memory for the session only, matching how
+  `_sessionDetails`/caches already reset on restart.
+- **No tab-completion.** `ShellLineEditor` only supports the editing/
+  navigation keys it was built with (Left/Right/Home/End/Delete/Backspace,
+  Up/Down for history); nothing here rules tab-completion out later, it
+  just wasn't asked for.
+- **A device-directory `LS` can be slow.** Building the merged media
+  listing polls the parent sync module's manifest exactly like
+  `LOCALCLIPS` does (§7.6) — up to 120×1s — whenever that device has an
+  active local-storage sync module.
+- **The line editor's redraw assumes a stable `Console.WindowWidth` for the
+  duration of one keystroke.** A terminal resize mid-line may misplace the
+  cursor until the next full prompt redraw — not solved here, and
+  PowerShell itself isn't perfectly robust to this either.
 
 ## 11. If you had to rebuild this from scratch, in order
 
