@@ -149,6 +149,31 @@ public class UnitTest_ShellLineEditor
     }
 
     [Fact]
+    public void Test_ReadLine_DownArrow_PastLongerEntry_ErasesWholeOldLineOnScreen()
+    {
+        //assign
+        var fake = new FakeConsoleIO([
+            Keys.Char('a'), Keys.Char('b'), Keys.Char('c'), Keys.Char('d'), Keys.Char('e'), Keys.Char('f'), Keys.Enter,
+            Keys.Up, Keys.Down, Keys.Enter
+        ]);
+        var editor = new ShellLineEditor(fake);
+
+        //act
+        editor.ReadLine("> ");
+        var writesBeforeSecondCall = fake.WrittenText.Count;
+        var secondResult = editor.ReadLine("> ");
+
+        //assert
+        secondResult.Should().Be("");
+        var writesInSecondCall = fake.WrittenText.Skip(writesBeforeSecondCall).ToList();
+        // writesInSecondCall: [0] prompt, [1] Up redraw ("abcdef" + pad), [2] Down redraw (back to empty)
+        var downRedraw = writesInSecondCall[2];
+        downRedraw.Trim().Should().BeEmpty("the Down redraw must contain nothing but erasing spaces");
+        downRedraw.Length.Should().BeGreaterThanOrEqualTo("abcdef".Length,
+            "it must blank out every column the 6-char history entry occupied, not just one trailing space");
+    }
+
+    [Fact]
     public void Test_ReadLine_ConsecutiveDuplicateEntry_NotAppendedAgain()
     {
         //assign

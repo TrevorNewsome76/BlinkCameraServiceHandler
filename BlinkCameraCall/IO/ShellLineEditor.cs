@@ -38,10 +38,16 @@ public class ShellLineEditor(IConsoleIO io)
             MoveCursorTo(cursorIndex);
         }
 
-        void RedrawAllFromStart()
+        // History recall can swap in a buffer of an arbitrarily different length
+        // than what's currently on screen (unlike the tail redraws above, where
+        // every caller changes the length by exactly one), so the erase has to
+        // cover however much longer the previously-displayed line was.
+        void RedrawAllFromStart(int previousLength)
         {
             MoveCursorTo(0);
-            io.Write(buffer.ToString() + " ");
+            var content = buffer.ToString();
+            var eraseCount = Math.Max(previousLength - content.Length, 0) + 1;
+            io.Write(content + new string(' ', eraseCount));
             MoveCursorTo(cursorIndex);
         }
 
@@ -105,6 +111,7 @@ public class ShellLineEditor(IConsoleIO io)
                     break;
 
                 case ConsoleKey.UpArrow:
+                {
                     if (_history.Count == 0)
                     {
                         break;
@@ -123,17 +130,22 @@ public class ShellLineEditor(IConsoleIO io)
                         break;
                     }
 
+                    var previousLength = buffer.Length;
                     buffer.Clear();
                     buffer.Append(_history[_historyIndex.Value]);
                     cursorIndex = buffer.Length;
-                    RedrawAllFromStart();
+                    RedrawAllFromStart(previousLength);
                     break;
+                }
 
                 case ConsoleKey.DownArrow:
+                {
                     if (_historyIndex is null)
                     {
                         break;
                     }
+
+                    var previousLength = buffer.Length;
 
                     if (_historyIndex < _history.Count - 1)
                     {
@@ -148,8 +160,9 @@ public class ShellLineEditor(IConsoleIO io)
                     }
 
                     cursorIndex = buffer.Length;
-                    RedrawAllFromStart();
+                    RedrawAllFromStart(previousLength);
                     break;
+                }
 
                 case ConsoleKey.Enter:
                     io.Write(Environment.NewLine);
