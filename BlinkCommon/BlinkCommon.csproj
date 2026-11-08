@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
@@ -11,6 +11,7 @@
     <PackageReference Include="RichardSzalay.MockHttp" Version="7.0.0" />
     <PackageReference Include="Shadow.Quack" Version="2.3.0" />
     <PackageReference Include="Shadow.Quack.Json" Version="1.4.7" />
+    <PackageReference Include="System.Text.Json" Version="11.0.0-rc.3.26522.148" />
   </ItemGroup>
 
 </Project>
