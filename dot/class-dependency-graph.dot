@@ -1,0 +1,68 @@
+digraph CSharpDependencies {
+  graph [rankdir=LR, fontname="Helvetica", fontsize=14, splines=sprite, overlap=false, nodesep=0.2, ranksep=0.8];
+  node [shape=box, style=filled, fillcolor=lightblue, fontname="Helvetica", fontsize=11];
+  edge [fontname="Helvetica", fontsize=9];
+
+  subgraph "cluster_BlinkCameraCall" {
+    label="BlinkCameraCall (net10.0)";
+    style="filled";
+    color="lightgray";
+
+    "BlinkCameraCall.ApiInterface" [label="ApiInterface", fillcolor=white, tooltip="BlinkCameraCall.ApiInterface"];
+    "BlinkCameraCall.BlinkAdapter" [label="BlinkAdapter", fillcolor=white, tooltip="BlinkCameraCall.BlinkAdapter"];
+    "BlinkCameraCall.ApiTransactions" [label="ApiTransactions", fillcolor=white, tooltip="BlinkCameraCall.ApiTransactions"];
+    "BlinkCameraCall.BlinkLibrary" [label="BlinkLibrary", fillcolor=white, tooltip="BlinkCameraCall.BlinkLibrary"];
+    "BlinkCameraCall.ApiDriver" [label="ApiDriver", fillcolor=white, tooltip="BlinkCameraCall.Driver.ApiDriver"];
+    "BlinkCameraCall.CommandPolling" [label="CommandPolling", fillcolor=white, tooltip="BlinkCameraCall.Driver.CommandPolling"];
+    "BlinkCameraCall.HttpClientApiHandler" [label="HttpClientApiHandler", fillcolor=white, tooltip="BlinkCameraCall.Driver.HttpClientApiHandler"];
+    "BlinkCameraCall.ManifestPolling" [label="ManifestPolling", fillcolor=white, tooltip="BlinkCameraCall.Driver.ManifestPolling"];
+    "BlinkCameraCall.OAuthConstants" [label="OAuthConstants", fillcolor=white, tooltip="BlinkCameraCall.Driver.OAuthConstants"];
+    "BlinkCameraCall.OAuthLoginClient" [label="OAuthLoginClient", fillcolor=white, tooltip="BlinkCameraCall.Driver.OAuthLoginClient"];
+    "BlinkCameraCall.AdapterExtension" [label="AdapterExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.AdapterExtension"];
+    "BlinkCameraCall.AuthenticationExtension" [label="AuthenticationExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.AuthenticationExtension"];
+    "BlinkCameraCall.CloudMediaExtension" [label="CloudMediaExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.CloudMediaExtension"];
+    "BlinkCameraCall.CommandProcessorExtension" [label="CommandProcessorExtension", fillcolor=white, tooltip="BlinkCameraCallUnitTests.Extensions.CommandProcessorExtension"];
+    "BlinkCameraCall.DeviceDetailExtension" [label="DeviceDetailExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.DeviceDetailExtension"];
+    "BlinkCameraCall.DeviceLookupExtension" [label="DeviceLookupExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.DeviceLookupExtension"];
+    "BlinkCameraCall.DeviceMapExtension" [label="DeviceMapExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.DeviceMapExtension"];
+    "BlinkCameraCall.DeviceMediaListingExtension" [label="DeviceMediaListingExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.DeviceMediaListingExtension"];
+    "BlinkCameraCall.HomeScreenExtensions" [label="HomeScreenExtensions", fillcolor=white, tooltip="BlinkCameraCall.Extensions.HomeScreenExtensions"];
+    "BlinkCameraCall.LocalStorageExtension" [label="LocalStorageExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.LocalStorageExtension"];
+    "BlinkCameraCall.MediaCommandExtensions" [label="MediaCommandExtensions", fillcolor=white, tooltip="BlinkCameraCall.Extensions.MediaCommandExtensions"];
+    "BlinkCameraCall.MediaFileExtension" [label="MediaFileExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.MediaFileExtension"];
+    "BlinkCameraCall.SessionDetailsExtension" [label="SessionDetailsExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.SessionDetailsExtension"];
+    "BlinkCameraCall.SettingsFileExtension" [label="SettingsFileExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.SettingsFileExtension"];
+    "BlinkCameraCall.ThumbnailUrlExtension" [label="ThumbnailUrlExtension", fillcolor=white, tooltip="BlinkCameraCall.Extensions.ThumbnailUrlExtension"];
+    "BlinkCameraCall.ShellLineEditor" [label="ShellLineEditor", fillcolor=white, tooltip="BlinkCameraCall.IO.ShellLineEditor"];
+    "BlinkCameraCall.SystemConsoleIO" [label="SystemConsoleIO", fillcolor=white, tooltip="BlinkCameraCall.IO.SystemConsoleIO"];
+    "BlinkCameraCall.Program" [label="Program", fillcolor=white, tooltip="BlinkCameraCall.Program"];
+    "BlinkCameraCall.ShellSession" [label="ShellSession", fillcolor=white, tooltip="BlinkCameraCall.ShellSession"];
+  }
+
+  subgraph "cluster_BlinkCommon" {
+    label="BlinkCommon (net10.0)";
+    style="filled";
+    color="lightgray";
+
+    "BlinkCommon.JsonSerializerExtension" [label="JsonSerializerExtension", fillcolor=white, tooltip="BlinkCommon.Extensions.JsonSerializerExtension"];
+    "BlinkCommon.OAuthLoginResult" [label="OAuthLoginResult", fillcolor=white, tooltip="BlinkCommon.Interfaces.Auth.OAuthLoginResult"];
+  }
+
+  "BlinkCameraCall.ApiInterface" -> "BlinkCameraCall.ApiTransactions" [penwidth=1.5];
+  "BlinkCameraCall.BlinkAdapter" -> "BlinkCameraCall.ApiDriver" [penwidth=1.5];
+  "BlinkCameraCall.BlinkAdapter" -> "BlinkCameraCall.ApiInterface" [penwidth=1.5];
+  "BlinkCameraCall.ApiTransactions" -> "BlinkCameraCall.ApiDriver" [penwidth=1.5];
+  "BlinkCameraCall.ApiTransactions" -> "BlinkCameraCall.ManifestPolling" [penwidth=1.5];
+  "BlinkCameraCall.ApiTransactions" -> "BlinkCameraCall.CommandPolling" [penwidth=1.5];
+  "BlinkCameraCall.ApiTransactions" -> "BlinkCommon.OAuthLoginResult" [penwidth=1.5];
+  "BlinkCameraCall.BlinkLibrary" -> "BlinkCameraCall.ThumbnailUrlExtension" [penwidth=1.5];
+  "BlinkCameraCall.BlinkLibrary" -> "BlinkCameraCall.MediaFileExtension" [penwidth=1.5];
+  "BlinkCameraCall.ApiDriver" -> "BlinkCameraCall.HttpClientApiHandler" [penwidth=1.5];
+  "BlinkCameraCall.ApiDriver" -> "BlinkCameraCall.OAuthLoginClient" [penwidth=1.5];
+  "BlinkCameraCall.OAuthLoginClient" -> "BlinkCommon.OAuthLoginResult" [penwidth=1.5];
+  "BlinkCameraCall.Program" -> "BlinkCameraCall.BlinkLibrary" [penwidth=1.5];
+  "BlinkCameraCall.Program" -> "BlinkCameraCall.BlinkAdapter" [penwidth=1.5];
+  "BlinkCameraCall.Program" -> "BlinkCameraCall.ShellLineEditor" [penwidth=1.5];
+  "BlinkCameraCall.Program" -> "BlinkCameraCall.SystemConsoleIO" [penwidth=1.5];
+  "BlinkCameraCall.Program" -> "BlinkCameraCall.ShellSession" [penwidth=1.5];
+}

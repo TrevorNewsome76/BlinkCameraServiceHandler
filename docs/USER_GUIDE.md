@@ -5,8 +5,9 @@ personal [Blink](https://blinkforhome.com/) home-security account and running a
 small set of commands against it: login (including two-factor codes), logout,
 client-trust PIN verification, fetching your "home screen" (networks, sync
 modules, cameras, doorbells), printing a readable device map, inspecting a
-single device, triggering and downloading fresh snapshots, and listing/
-downloading cloud and SD-card video clips.
+single device, triggering and downloading fresh snapshots, listing/
+downloading cloud and SD-card video clips, and navigating hubs and devices
+as a `cd`/`ls` tree instead of repeating a device name on every command.
 
 If you want to know *how* it works instead of how to use it, see
 [DEVELOPER.md](DEVELOPER.md).
@@ -77,6 +78,10 @@ Type commands at the prompt, one per line, and press Enter.
 | Download a cloud clip | `DOWNLOAD -i<id>` | Downloads a cloud clip (by id from the last `VIDEOS` list) to `media/` as a `.mp4`. |
 | List an SD card's clips | `LOCALCLIPS -n<syncmodule>` | Requests and lists the SD-card manifest for a sync module (takes a few seconds). |
 | Download an SD-card clip | `LOCALDOWNLOAD -i<id> -n<syncmodule>` | Downloads one SD-card clip (by id from the last `LOCALCLIPS` list for that sync module) to `media/`. |
+| Change directory | `CD <name>`, `CD ..`, `CD \` | Moves into a hub or device, back up a level, or straight back to the root of the tree. |
+| List current directory | `LS` | Lists hubs at the root, devices in a hub, or a device's media, depending on where you are. |
+| Trigger (current device) | `TRIGGER` | Takes a fresh snapshot of the device you're currently `cd`'d into. |
+| Download by name | `DOWNLOAD <name>` | Downloads a media item by the name `LS` showed for it (device directory only). |
 | Logout | `LOGOUT` | Logs out of the current session. |
 | Help | `HELP` | Prints command help. |
 | Quit | `QUIT` or `EXIT` | Exits the program. |
@@ -125,6 +130,28 @@ VIDEOS -h48
 DOWNLOAD -i2001
 Saved video to media\Front_Door_20261103_143512.mp4.
 
+BC> cd Home
+Now in hub 'Home'.
+
+BC\Home> cd Front Door
+Now in device 'Front Door'.
+
+BC\Home\Front Door> ls
+current  [current]
+2026-11-02_09-00-00  [cloud]
+
+BC\Home\Front Door> trigger
+New image captured for 'Front Door'. Run IMAGE -nFront Door to download it.
+
+BC\Home\Front Door> download current
+Saved image to media\Front_Door_20261103_143600.jpg.
+
+BC\Home\Front Door> cd ..
+Now in hub 'Home'.
+
+BC\Home> cd \
+Back to root.
+
 LOGOUT
 Successfully logged out.
 
@@ -147,6 +174,45 @@ listed individually.
 
 If you're not logged in, `MAP` gives the same `Not currently logged into
 Blink service.` message as `VERIFY`/`GET`/`LOGOUT`.
+
+## Navigating with CD/LS
+
+Instead of repeating a device's name on every command, you can `cd` into it
+once and run `TRIGGER`/`DOWNLOAD <name>` against "wherever you are." The
+prompt itself tracks this: it starts as `BC>` at the root, grows to
+`BC\<hub>>` once you `cd` into a hub, and grows again to
+`BC\<hub>\<device>>` once you `cd` into a camera or doorbell.
+
+- `CD <name>` moves down one level: from the root into a hub, or from a hub
+  into one of its cameras/doorbells. The name must match exactly what `LS`
+  shows (case-insensitive).
+- `CD ..` moves up one level (device → hub → root). At the root, `CD ..` is
+  a no-op.
+- `CD \` (or `CD /`) jumps straight back to the root from anywhere.
+- `LS` lists whatever is "in" your current directory: hubs at the root,
+  that hub's cameras/doorbells one level down, or — inside a device — a
+  merged listing of its current thumbnail plus its recent cloud and
+  SD-card clips, each tagged `[current]`, `[cloud]`, or `[local]`.
+
+`TRIGGER` and bare `DOWNLOAD <name>` only work inside a device directory
+(`cd` into a camera or doorbell first), and `DOWNLOAD <name>` additionally
+needs you to have run `LS` at least once since `cd`-ing there, since it
+downloads whichever entry `LS` just showed under that name.
+
+All of the original flag-style commands — including the legacy
+`DOWNLOAD -i<id>` — keep working completely unchanged no matter where you
+currently are in the tree; `cd`/`ls` are a convenience layered on top, not a
+replacement.
+
+| Message | What it means |
+|---|---|
+| `Not currently logged into Blink service.` | Log in first. |
+| `Run MAP or GET first to load your devices.` | You're logged in, but haven't fetched your device list yet this session. |
+| `No hub named '<name>' was found. Run LS to see exact names.` | `CD` at the root didn't match any hub. |
+| `No device named '<name>' was found. Run LS to see exact names.` | `CD` inside a hub didn't match any of its cameras/doorbells. |
+| `Not in a device directory. cd into a camera or doorbell first.` | `TRIGGER` or bare `DOWNLOAD` was run at the root or in a hub. |
+| `Run LS first.` | Bare `DOWNLOAD <name>` was run before `LS` in this device directory (or after `cd`-ing elsewhere and back). |
+| `'<name>' wasn't in the last LS output.` | The name didn't match any entry from the last `LS`. |
 
 ## Single device detail (`DEVICE`)
 

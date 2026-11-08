@@ -238,6 +238,28 @@ public static class MockData
             Accessories = CreateValidHomeAccessories(),
         });
 
+    // Mirrors CreateValidHomeScreenResponse but with Pergoda's Thumbnail changed, to model what a
+    // second /homescreen fetch (e.g. after a Trigger/Snap) returns once Blink has a new image.
+    // Used by MockHttpClientApiHandler to distinguish the first vs. a later homescreen fetch.
+    public static IGetHomeScreenResponse CreateValidHomeScreenResponseWithUpdatedThumbnail() =>
+        Duck.Implement<IGetHomeScreenResponse>(new
+        {
+            Account = CreateValidHomeScreenAccount(),
+            Networks = CreateValidHomeScreenNetworks(),
+            Sync_Modules = CreateValidHomeScreenSyncModules(),
+            Cameras = CreateValidHomeScreenCamerasWithUpdatedPergodaThumbnail(),
+            Video_Stats = CreateValidHomeScreenVideoStats(),
+            Doorbells = CreateValidHomeScreenDoorbells(),
+            App_Updates = CreateValidHomeScreenAppUpdates(),
+            Device_Limits = CreateValidHomeScreenDeviceLimits(),
+            Whats_New = CreateValidHomeScreenWhatsNew(),
+            Subscriptions = CreateValidHomeSubscriptions(),
+            Entitlements = CreateValidHomeEntitlements(),
+            Tiv_Lock_Enable = true,
+            Tiv_LockStatus = CreateValidHomeTivLockStatus(),
+            Accessories = CreateValidHomeAccessories(),
+        });
+
     public static IHomeScreenAccount CreateValidHomeScreenAccount() =>
         Duck.Implement<IHomeScreenAccount>(new
         {
@@ -336,6 +358,67 @@ public static class MockData
                 Type = "catalina",
                 Enabled = true,
                 Thumbnail = "/api/v3/media/accounts/239361/networks/263178/catalina/321343/thumbnail/thumbnail.jpg?ts=1705051738&ext=",
+                Status = "done",
+                Battery = "ok",
+                Usage_Rate = false,
+                Network_Id = 263178,
+                Signals = new {
+                    Lfr = 3,
+                    Wifi = 5,
+                    Temp = 57,
+                    Battery = 3
+                },
+                Local_Storage_Enabled = false,
+                Local_Storage_Compatible = true,
+                Snooze = false,
+                Revision = "01",
+                Color = "black"
+            },
+            new
+            {
+                Id = 321380,
+                Created_At = "2022-04-25T16:30:43+00:00",
+                Updated_At = "2024-02-17T11:46:21+00:00",
+                Name = "Garage",
+                Serial = "G8T1GJ0120430Q97",
+                Fw_Version = "10.64",
+                Type = "catalina",
+                Enabled = true,
+                Thumbnail = "/api/v3/media/accounts/239361/networks/263178/catalina/321380/thumbnail/thumbnail.jpg?ts=1705747766&ext=",
+                Status = "done",
+                Battery = "ok",
+                Usage_Rate = false,
+                Network_Id = 263178,
+                Signals = new {
+                    Lfr = 5,
+                    Wifi = 5,
+                    Temp = 57,
+                    Battery = 3
+                },
+                Local_Storage_Enabled = false,
+                Local_Storage_Compatible = true,
+                Snooze = false,
+                Revision = "01",
+                Color = "black"
+            }
+        });
+
+    // Same as CreateValidHomeScreenCameras, but Pergoda's Thumbnail carries a new ts value, as if
+    // a fresh snapshot had just landed. Garage is left untouched.
+    public static List<IHomeScreenCamera> CreateValidHomeScreenCamerasWithUpdatedPergodaThumbnail() =>
+        Duck.Implement<List<IHomeScreenCamera>>(new[]
+        {
+            new
+            {
+                Id = 321343,
+                Created_At = "2022-04-25T16:09:04+00:00",
+                Updated_At = "2024-02-17T14:01:21+00:00",
+                Name = "Pergoda",
+                Serial = "G8T1GJ0120430Q9H",
+                Fw_Version = "10.64",
+                Type = "catalina",
+                Enabled = true,
+                Thumbnail = "/api/v3/media/accounts/239361/networks/263178/catalina/321343/thumbnail/thumbnail.jpg?ts=1705099999&ext=",
                 Status = "done",
                 Battery = "ok",
                 Usage_Rate = false,

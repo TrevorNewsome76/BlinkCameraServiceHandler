@@ -28,7 +28,7 @@ public static class DeviceMapExtension
 
             var lines = new List<string>
             {
-                $"Network: {network.Name} ({(network.Armed ? "armed" : "disarmed")})"
+                network.FormatNetworkLine()
             };
             lines.AddRange(networkSyncModules.Select(FormatSyncModuleLine));
 
@@ -77,10 +77,13 @@ public static class DeviceMapExtension
     private static string FormatSyncModuleLine(IHomeScreenSyncModule syncModule) =>
         $"  Sync Module: {syncModule.Name}  [{syncModule.Status}, fw {syncModule.Fw_Version}, wifi {syncModule.Wifi_Strength}]";
 
-    private static string FormatCameraLine(IHomeScreenCamera camera) =>
+    internal static string FormatNetworkLine(this IHomeScreenNetwork network) =>
+        $"Network: {network.Name} ({(network.Armed ? "armed" : "disarmed")})";
+
+    internal static string FormatCameraLine(IHomeScreenCamera camera) =>
         $"  Camera: {camera.Name}  [{(camera.Enabled ? "enabled" : "disabled")}, status {camera.Status}, battery {camera.Battery}, wifi {FormatWifi(camera.Signals)}]";
 
-    private static string FormatDoorbellLine(IHomeScreenDoorbells doorbell) =>
+    internal static string FormatDoorbellLine(IHomeScreenDoorbells doorbell) =>
         $"  Doorbell: {doorbell.Name}  [{(doorbell.Enabled ? "enabled" : "disabled")}, status {doorbell.Status}, battery {doorbell.Battery}, wifi {FormatWifi(doorbell.Signals)}]";
 
     private static string FormatWifi(IHomeScreenCameraSignals? signals) =>

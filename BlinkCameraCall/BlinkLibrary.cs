@@ -12,6 +12,8 @@ public class BlinkLibrary(IAdapter adapter)
     private List<ICloudMediaItem>? _lastCloudMedia;
     private (long SyncModuleId, long ManifestId, List<ILocalStorageClip> Clips)? _lastLocalManifest;
 
+    public ISessionDetails? CurrentSession => _sessionDetails.LoggedInStatus ? _sessionDetails : null;
+
     public string Login()
     {
         var loginResponse = adapter.Login();
@@ -182,6 +184,11 @@ public class BlinkLibrary(IAdapter adapter)
         if (camera is null && doorbell is null)
             return $"No single device named '{name}' was found. Run MAP to see exact names.";
 
+        return DownloadCurrentThumbnail(name, camera, doorbell, mediaDirectory);
+    }
+
+    internal string DownloadCurrentThumbnail(string name, IHomeScreenCamera? camera, IHomeScreenDoorbells? doorbell, string? mediaDirectory = null)
+    {
         var thumbnailField = camera?.Thumbnail ?? doorbell!.Thumbnail;
         if (string.IsNullOrEmpty(thumbnailField))
             return $"'{name}' has no image yet — run SNAP -n{name} first.";
@@ -222,10 +229,15 @@ public class BlinkLibrary(IAdapter adapter)
         if (item is null)
             return $"Run VIDEOS first, or '{id}' wasn't in the last VIDEOS list.";
 
+        return DownloadCloudItem(item, mediaDirectory);
+    }
+
+    internal string DownloadCloudItem(ICloudMediaItem item, string? mediaDirectory = null)
+    {
         var url = $"https://rest-{_sessionDetails.Account!.Tier}.immedia-semi.com{item.Media}";
         var bytes = adapter.DownloadBytes(url);
         if (bytes is null)
-            return $"Blink did not return a clip for '{id}'.";
+            return $"Blink did not return a clip for '{item.Id}'.";
 
         var path = MediaFileExtension.SaveMediaFile(item.Device_Name, bytes, "mp4", mediaDirectory);
         return $"Saved video to {path}.";
@@ -283,21 +295,69 @@ public class BlinkLibrary(IAdapter adapter)
         if (clip is null)
             return $"'{id}' wasn't in the last LOCALCLIPS list for '{name}'.";
 
-        var account = _sessionDetails.Account!;
-        var networkId = long.Parse(syncModule.Network_Id);
         var manifestId = _lastLocalManifest.Value.ManifestId;
 
-        var prepareResult = adapter.PrepareLocalStorageClip(account, networkId, syncModule.Id, manifestId, id, pollInterval, maxRetries);
-        if (prepareResult is null)
-            return $"Blink did not finish preparing the clip for '{name}' in time.";
+        return DownloadLocalClip(syncModule, manifestId, clip, pollInterval, maxRetries, mediaDirectory);
+    }
 
-        var url = adapter.BuildLocalStorageClipUrl(account, networkId, syncModule.Id, manifestId, id);
+    internal string DownloadLocalClip(IHomeScreenSyncModule syncModule, long manifestId, ILocalStorageClip clip, TimeSpan? pollInterval = null, int maxRetries = 120, string? mediaDirectory = null)
+    {
+        var account = _sessionDetails.Account!;
+        var networkId = long.Parse(syncModule.Network_Id);
+
+        var prepareResult = adapter.PrepareLocalStorageClip(account, networkId, syncModule.Id, manifestId, clip.Id, pollInterval, maxRetries);
+        if (prepareResult is null)
+            return $"Blink did not finish preparing the clip for '{syncModule.Name}' in time.";
+
+        var url = adapter.BuildLocalStorageClipUrl(account, networkId, syncModule.Id, manifestId, clip.Id);
         var bytes = adapter.DownloadBytes(url);
         if (bytes is null)
-            return $"Blink did not return the clip for '{name}'.";
+            return $"Blink did not return the clip for '{syncModule.Name}'.";
 
         var path = MediaFileExtension.SaveMediaFile(clip.Camera_Name, bytes, "mp4", mediaDirectory);
         return $"Saved video to {path}.";
+    }
+
+    internal DeviceMediaListing ListDeviceMedia(string deviceName, IHomeScreenCamera? camera, IHomeScreenDoorbells? doorbell, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        var entries = new List<DeviceMediaEntry>();
+
+        var thumbnailField = camera?.Thumbnail ?? doorbell?.Thumbnail;
+        if (!string.IsNullOrEmpty(thumbnailField))
+            entries.Add(new DeviceMediaEntry("current", DeviceMediaKind.Current, null, null, null, null, null));
+
+        var cloudMedia = adapter.GetRecentMedia(_sessionDetails.Account!, DateTime.UtcNow.AddHours(-24))?.Media ?? new List<ICloudMediaItem>();
+        foreach (var item in cloudMedia.Where(m => !m.Deleted && string.Equals(m.Device_Name, deviceName, StringComparison.OrdinalIgnoreCase)))
+            entries.Add(new DeviceMediaEntry(item.Created_At.ToUniversalTime().ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Cloud, item.Created_At, item, null, null, null));
+
+        var networkId = camera?.Network_Id ?? doorbell!.Network_Id;
+        var syncModule = _sessionDetails.SyncModules?.FirstOrDefault(s => s.Network_Id == networkId.ToString());
+
+        if (syncModule is not null && syncModule.Local_Storage_Status == "active")
+        {
+            var account = _sessionDetails.Account!;
+            var syncNetworkId = long.Parse(syncModule.Network_Id);
+
+            var requestResult = adapter.RequestLocalStorageManifest(account, syncNetworkId, syncModule.Id);
+            var manifestResult = adapter.GetLocalStorageManifest(account, syncNetworkId, syncModule.Id, requestResult!.Id, pollInterval, maxRetries);
+
+            if (manifestResult is not null)
+            {
+                var clips = manifestResult.Clips ?? new List<ILocalStorageClip>();
+                foreach (var clip in clips.Where(c => string.Equals(c.Camera_Name, deviceName, StringComparison.OrdinalIgnoreCase)))
+                    entries.Add(new DeviceMediaEntry(clip.Created_At.ToUniversalTime().ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Local, clip.Created_At, null, clip, syncModule, manifestResult.Manifest_Id));
+            }
+        }
+
+        var seenNames = new HashSet<string>();
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var entry = entries[i];
+            if (!seenNames.Add(entry.Name))
+                entries[i] = entry with { Name = $"{entry.Name}_{entry.CloudItem?.Id ?? entry.LocalClip!.Id}" };
+        }
+
+        return new DeviceMediaListing(entries);
     }
 
     public string Help(string[] arguments)

@@ -110,4 +110,114 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
         //assert
         actualResult.Should().BeEquivalentTo(expectedResult);
     }
+
+    [Fact]
+    public void Test_CommandSplitBarePositional_Cd_WithMultiWordTarget()
+    {
+        //assign
+        string consoleCommand = "cd Front Door";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "cd",
+            Arguments = new string[] { "Front Door" },
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitBarePositional_Cd_NoTarget()
+    {
+        //assign
+        string consoleCommand = "cd";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "cd",
+            Arguments = new string[] { "" },
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitBarePositional_Ls_IgnoresTrailingText()
+    {
+        //assign
+        string consoleCommand = "ls extra";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "ls",
+            Arguments = new string[] { "extra" },
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitBarePositional_Trigger_NoTarget()
+    {
+        //assign
+        string consoleCommand = "trigger";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "trigger",
+            Arguments = new string[] { "" },
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitDownload_FlagStyle_StillUsesLegacyParsing()
+    {
+        //assign
+        string consoleCommand = "download -i123";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "download",
+            Arguments = new string[] { "i123" },
+            BareDownload = false,
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitDownload_BareName_SetsBareDownloadFlag()
+    {
+        //assign
+        string consoleCommand = "download Front Door Clip";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "download",
+            Arguments = new string[] { "Front Door Clip" },
+            BareDownload = true,
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
 }
