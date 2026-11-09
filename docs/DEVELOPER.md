@@ -263,6 +263,38 @@ as-is; nothing in this rewrite changed it. `Client_Id` is a concept that does no
 exist in the new OAuth flow's responses at all (`OAuthLoginResult.ClientId` is
 always `0` from the real client - see §9 for why it still exists as a field).
 
+### 6.6 Automatic login at startup (`Program.AttemptAutoLogin`)
+
+`Program.cs`'s `Main` calls `AttemptAutoLogin` once, before entering the
+command loop, to satisfy "don't make me retype my credentials every run"
+without changing anything about how `LOGIN`/`VERIFY` work when typed
+manually — it's pure orchestration on top of the existing primitives:
+
+- Skips entirely if `settings.Email`/`Password` are empty, or still the
+  literal shipped placeholders (`test@email.com`/`PAssword` —
+  `SettingsFileExtension.Load`'s defaults) — a fresh install falls straight
+  through to the normal prompt, exactly as before this feature existed.
+- Otherwise calls the existing `BlinkLibrary.Login()` (the no-args overload,
+  which already reads `IBlinkSettings.Email`/`Password` — functionally the
+  same as typing `LOGIN` with no arguments).
+- Two new `BlinkLibrary` properties decide what happens next without any
+  string-matching on the returned message: `IsLoggedIn` (`_sessionDetails.LoggedInStatus`)
+  and `TwoFactorPending` (`!IsLoggedIn && _sessionDetails.Verification?.Phone?.Required == true`).
+  If `TwoFactorPending`, it prompts for just the code (not `VERIFY -v<code>` —
+  the prefix is added for you) up to 3 times, calling the existing
+  `BlinkLibrary.VerifyPin` each time; a wrong code doesn't start over, the
+  same pending-challenge behavior §6.3 already documents applies.
+- `SaveCredentialsIfLoggedIn` runs after this *and* after every manual
+  `LOGIN`/`VERIFY` in the command loop: if `IsLoggedIn`, it reads
+  `BlinkLibrary.CurrentSession.Auth.UserName`/`.Password` — already
+  populated correctly for both a direct login and a 2FA-completed one,
+  since `ApiTransactions` carries the original username/password through
+  `_pendingUsername`/`_pendingPassword` (§6.3) into `MapLoginResult`'s
+  `Auth` object regardless of which path completed it — and writes them
+  into `settings.json`. This is how a first manual `LOGIN -u<email> -p<password>`
+  (optionally completed with `VERIFY -v<code>`) becomes tomorrow's automatic
+  login: nothing has to explicitly "remember" which flow was used.
+
 ## 7. Session data and the "home screen"
 
 `SystemGetHomeScreen` (`ApiTransactions`) is an ordinary Bearer-token REST call to

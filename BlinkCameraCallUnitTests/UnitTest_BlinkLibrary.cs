@@ -985,6 +985,70 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_IsLoggedIn_FalseBeforeLogin()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+
+        //assert
+        blinkLib.IsLoggedIn.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Test_IsLoggedIn_TrueAfterSuccessfulLogin()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+
+        //act
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+
+        //assert
+        blinkLib.IsLoggedIn.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Test_TwoFactorPending_FalseBeforeLogin()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+
+        //assert
+        blinkLib.TwoFactorPending.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Test_TwoFactorPending_TrueWhenLoginRequiresTwoFactor()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+
+        //act
+        blinkLib.Login(new[] { "utwofactor@email.com", "pPAssword" });
+
+        //assert
+        blinkLib.TwoFactorPending.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Test_TwoFactorPending_FalseAfterSuccessfulLogin()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+
+        //act
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+
+        //assert
+        blinkLib.TwoFactorPending.Should().BeFalse();
+    }
+
+    [Fact]
     public void Test_LoginRequiresTwoFactor_ThenVerifySucceeds()
     {
         //assign

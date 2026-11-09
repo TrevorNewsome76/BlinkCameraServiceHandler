@@ -14,6 +14,10 @@ public class BlinkLibrary(IAdapter adapter)
 
     public ISessionDetails? CurrentSession => _sessionDetails.LoggedInStatus ? _sessionDetails : null;
 
+    public bool IsLoggedIn => _sessionDetails.LoggedInStatus;
+
+    public bool TwoFactorPending => !_sessionDetails.LoggedInStatus && _sessionDetails.Verification?.Phone?.Required == true;
+
     public string Login()
     {
         var loginResponse = adapter.Login();

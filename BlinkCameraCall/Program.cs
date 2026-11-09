@@ -34,6 +34,8 @@ namespace BlinkCameraCall
             var shellLineEditor = new ShellLineEditor(new SystemConsoleIO());
             var shellSession = new ShellSession(blinkLibrary);
 
+            AttemptAutoLogin(blinkLibrary, settings);
+
             bool quitNow = false;
             while (!quitNow)
             {
@@ -71,6 +73,7 @@ namespace BlinkCameraCall
                                 Console.WriteLine(command?.Arguments is null
                                     ? blinkLibrary.Login()
                                     : blinkLibrary.Login(command.Arguments));
+                                SaveCredentialsIfLoggedIn(blinkLibrary, settings);
                                 break;
 
                             case "logout":
@@ -78,6 +81,7 @@ namespace BlinkCameraCall
                                 break;
                             case "verify":
                                 Console.WriteLine(blinkLibrary.VerifyPin(command.Arguments));
+                                SaveCredentialsIfLoggedIn(blinkLibrary, settings);
                                 break;
                             case "quit":
                             case "exit":
@@ -159,6 +163,58 @@ namespace BlinkCameraCall
 
                 Console.WriteLine();
             }
+        }
+
+        private const string PlaceholderEmail = "test@email.com";
+        private const string PlaceholderPassword = "PAssword";
+        private const int MaxVerificationAttempts = 3;
+
+        private static void AttemptAutoLogin(BlinkLibrary blinkLibrary, IBlinkSettings settings)
+        {
+            if (string.IsNullOrEmpty(settings.Email) || string.IsNullOrEmpty(settings.Password))
+                return;
+
+            if (settings.Email == PlaceholderEmail && settings.Password == PlaceholderPassword)
+                return;
+
+            Console.WriteLine("Automatically logging in...");
+            var loginResult = blinkLibrary.Login();
+
+            if (blinkLibrary.TwoFactorPending)
+            {
+                for (var attempt = 1; attempt <= MaxVerificationAttempts && !blinkLibrary.IsLoggedIn; attempt++)
+                {
+                    Console.Write("Enter the verification code Blink sent you: ");
+                    var code = Console.ReadLine() ?? string.Empty;
+                    Console.WriteLine(blinkLibrary.VerifyPin(new[] { $"v{code}" }));
+                }
+            }
+            else
+            {
+                Console.WriteLine(loginResult);
+            }
+
+            if (!blinkLibrary.IsLoggedIn)
+            {
+                Console.WriteLine("Authentication failed. Check settings in config.");
+                return;
+            }
+
+            SaveCredentialsIfLoggedIn(blinkLibrary, settings);
+        }
+
+        private static void SaveCredentialsIfLoggedIn(BlinkLibrary blinkLibrary, IBlinkSettings settings)
+        {
+            if (!blinkLibrary.IsLoggedIn)
+                return;
+
+            var auth = blinkLibrary.CurrentSession?.Auth;
+            if (auth is null || string.IsNullOrEmpty(auth.UserName))
+                return;
+
+            settings.Email = auth.UserName;
+            settings.Password = auth.Password;
+            settings.Save($"{AppContext.BaseDirectory}");
         }
     }
 }

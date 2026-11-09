@@ -62,6 +62,46 @@ Blink Camera Terminal
 
 Type commands at the prompt, one per line, and press Enter.
 
+### Automatic login
+
+If `settings.json` already has a real `Email`/`Password` (not the shipped
+placeholders), the app logs in automatically at startup instead of waiting
+for you to type `LOGIN`:
+
+```
+Blink Camera Terminal
+Automatically logging in...
+Login to the Blink Service successful.
+```
+
+If Blink asks for a two-factor code, you're prompted for just the code
+(no `VERIFY -v` needed) right there at startup:
+
+```
+Automatically logging in...
+Enter the verification code Blink sent you: 123456
+Login to the Blink Service successful.
+```
+
+You get up to 3 attempts at the code before it gives up:
+
+```
+Automatically logging in...
+Enter the verification code Blink sent you: 000000
+Login to the Blink Service failed: ...
+Enter the verification code Blink sent you: 111111
+Login to the Blink Service failed: ...
+Enter the verification code Blink sent you: 222222
+Login to the Blink Service failed: ...
+Authentication failed. Check settings in config.
+```
+
+After that it drops you at the normal prompt, not logged in — run `LOGIN`
+manually when you're ready. Whenever a login fully succeeds (automatic or
+manual), the email/password that were actually used are saved back into
+`settings.json`, so a successful manual `LOGIN -u<email> -p<password>` the
+first time sets you up for automatic login on every run after that.
+
 ## Commands
 
 | Command | Syntax | What it does |
