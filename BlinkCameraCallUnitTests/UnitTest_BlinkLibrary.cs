@@ -389,6 +389,46 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmSystemFailedNotLoggedIn()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var actualResult = new BlinkLibrary(mockAdapter).Arm();
+        actualResult.Should().BeEquivalentTo("Not currently logged into Blink service.");
+    }
+
+    [Fact]
+    public void Test_ArmSystemFailedNoHubsLoaded()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var actualResult = blinkLib.Arm();
+        actualResult.Should().BeEquivalentTo("Run MAP or GET first to load your devices.");
+    }
+
+    [Fact]
+    public void Test_ArmSystem_AcrossBothHubs_ReportsGrandTotal()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var expected =
+            "Hub 'Home Front': armed." + Environment.NewLine +
+            "  Camera 'Pergoda': armed." + Environment.NewLine +
+            "  Camera 'Garage': Blink did not finish arming 'Garage' in time." + Environment.NewLine +
+            "  Doorbell 'Front door bell': armed." + Environment.NewLine +
+            "Armed hub 'Home Front' (3/4 succeeded)." + Environment.NewLine +
+            "Hub 'Home Back': armed." + Environment.NewLine +
+            "Armed hub 'Home Back' (1/1 succeeded)." + Environment.NewLine +
+            "Armed the system (4/5 succeeded across 2 hubs).";
+
+        var actualResult = blinkLib.Arm(TimeSpan.Zero, 1);
+
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
     public void Test_DeviceFailedNotLoggedIn()
     {
         //assign

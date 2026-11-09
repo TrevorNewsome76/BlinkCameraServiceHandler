@@ -221,6 +221,44 @@ public class BlinkLibrary(IAdapter adapter)
         return string.Join(Environment.NewLine, lines);
     }
 
+    public string Arm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        ArmOrDisarmSystem(arm: true, pollInterval, maxRetries);
+
+    public string Disarm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        ArmOrDisarmSystem(arm: false, pollInterval, maxRetries);
+
+    private string ArmOrDisarmSystem(bool arm, TimeSpan? pollInterval, int maxRetries)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_sessionDetails.Networks is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var done = arm ? "Armed" : "Disarmed";
+
+        if (_sessionDetails.Networks.Count == 0)
+            return arm ? "No hubs to arm." : "No hubs to disarm.";
+
+        var lines = new List<string>();
+        var grandSucceeded = 0;
+        var grandTotal = 0;
+
+        foreach (var network in _sessionDetails.Networks)
+        {
+            var (networkLines, succeeded, total) = ArmOrDisarmNetwork(network, arm, pollInterval, maxRetries);
+            lines.AddRange(networkLines);
+            lines.Add($"{done} hub '{network.Name}' ({succeeded}/{total} succeeded).");
+            grandSucceeded += succeeded;
+            grandTotal += total;
+        }
+
+        lines.Add($"{done} the system ({grandSucceeded}/{grandTotal} succeeded across {_sessionDetails.Networks.Count} hubs).");
+        RefreshDeviceLists();
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
     private (List<string> Lines, int Succeeded, int Total) ArmOrDisarmNetwork(IHomeScreenNetwork network, bool arm, TimeSpan? pollInterval, int maxRetries)
     {
         var lines = new List<string>();
