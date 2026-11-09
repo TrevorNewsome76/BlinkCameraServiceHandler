@@ -60,7 +60,7 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
             case "https://rest-007.immedia-semi.com/network/263178/arm":
                 return "{\"id\":1020,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/disarm":
-                return "{\"id\":1021,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+                return "{\"message\":\"system busy\"}";
             case "https://rest-007.immedia-semi.com/network/263310/arm":
                 return "{\"id\":1022,\"network_id\":263310,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263310/disarm":
@@ -157,8 +157,6 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":1015,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/command/1020":
                 return "{\"id\":1020,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
-            case "https://rest-007.immedia-semi.com/network/263178/command/1021":
-                return "{\"id\":1021,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263310/command/1022":
                 return "{\"id\":1022,\"network_id\":263310,\"complete\":true,\"status_code\":908}";
             default:

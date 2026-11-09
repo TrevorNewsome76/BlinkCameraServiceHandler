@@ -314,6 +314,31 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_DisarmHub_NetworkItselfRejected_WithRealChildren_StillAttemptsAll()
+    {
+        // Unlike Test_DisarmHub_NetworkItselfRejected_StillCompletesWithoutThrowing above
+        // (which uses zero-child "Home Back" and so only vacuously proves children "still get
+        // attempted"), this uses "Home Front" with its real mixed-outcome children, so the
+        // network's own failure and the children's independent outcomes are both exercised
+        // and asserted together in one combined scenario.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeFront = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Front");
+        var expected =
+            "Hub 'Home Front': Blink rejected the request: {\"message\":\"system busy\"}" + Environment.NewLine +
+            "  Camera 'Pergoda': disarmed." + Environment.NewLine +
+            "  Camera 'Garage': Blink rejected the request: {\"message\":\"system busy\"}" + Environment.NewLine +
+            "  Doorbell 'Front door bell': disarmed." + Environment.NewLine +
+            "Disarmed hub 'Home Front' (2/4 succeeded).";
+
+        var actualResult = blinkLib.Disarm(homeFront, TimeSpan.Zero, 1);
+
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
     public void Test_ArmHub_NoChildDevices_SucceedsWithOneOfOne()
     {
         var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
