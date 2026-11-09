@@ -1281,4 +1281,110 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         //assert
         result.Entries.Should().ContainSingle(e => e.Name == "current" && e.Kind == DeviceMediaKind.Current);
     }
+
+    [Fact]
+    public void Test_WatchFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Watch(Array.Empty<string>(), _ => { });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_WatchSuccessful_ReturnsStatusMessage()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var expected = "Watching for new events every 20s. Use UNWATCH to stop.";
+
+        //act
+        var actualResult = blinkLib.Watch(Array.Empty<string>(), _ => { });
+        blinkLib.Unwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_WatchFailed_AlreadyWatching()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Watch(Array.Empty<string>(), _ => { });
+        var expected = "Already watching. Use UNWATCH to stop.";
+
+        //act
+        var actualResult = blinkLib.Watch(Array.Empty<string>(), _ => { });
+        blinkLib.Unwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_UnwatchFailedNotWatching()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently watching.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Unwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_UnwatchSuccessful_AllowsRestart()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Watch(Array.Empty<string>(), _ => { });
+        var expected = "Stopped watching.";
+
+        //act
+        var actualResult = blinkLib.Unwatch();
+        var restartResult = blinkLib.Watch(Array.Empty<string>(), _ => { });
+        blinkLib.Unwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+        restartResult.Should().BeEquivalentTo("Watching for new events every 20s. Use UNWATCH to stop.");
+    }
+
+    [Fact]
+    public void Test_LogoutWhileWatching_StopsWatch_SoNextLoginCanWatchAgain()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Watch(Array.Empty<string>(), _ => { });
+
+        //act
+        blinkLib.Logout();
+        blinkLib.Login(loginArguments);
+        var actualResult = blinkLib.Watch(Array.Empty<string>(), _ => { });
+        blinkLib.Unwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo("Watching for new events every 20s. Use UNWATCH to stop.");
+    }
 }

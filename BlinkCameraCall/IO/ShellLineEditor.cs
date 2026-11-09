@@ -11,169 +11,227 @@ namespace BlinkCameraCall.IO;
 public class ShellLineEditor(IConsoleIO io)
 {
     private readonly List<string> _history = [];
+    private readonly object _lock = new();
     private int? _historyIndex;
+
+    private bool _active;
+    private string _prompt = string.Empty;
+    private StringBuilder _buffer = new();
+    private int _cursorIndex;
+    private int _promptStartTop;
+    private int _promptEndLeft;
+    private int _promptEndTop;
 
     public string ReadLine(string prompt)
     {
+        _promptStartTop = io.CursorTop;
+        _prompt = prompt;
         io.Write(prompt);
-        var promptEndLeft = io.CursorLeft;
-        var promptEndTop = io.CursorTop;
+        _promptEndLeft = io.CursorLeft;
+        _promptEndTop = io.CursorTop;
 
-        var buffer = new StringBuilder();
-        var cursorIndex = 0;
+        _buffer = new StringBuilder();
+        _cursorIndex = 0;
         _historyIndex = null;
+        _active = true;
 
-        void MoveCursorTo(int i)
+        lock (_lock)
         {
-            var col = promptEndLeft + i;
-            var row = promptEndTop + col / io.WindowWidth;
-            col %= io.WindowWidth;
-            io.CursorLeft = col;
-            io.CursorTop = row;
+            // Establish the baseline cursor position explicitly rather than relying
+            // on Write's side effect — every subsequent move is computed from here.
+            MoveCursorTo(_cursorIndex);
         }
-
-        void RedrawTailFrom(int i)
-        {
-            io.Write(buffer.ToString(i, buffer.Length - i) + " ");
-            MoveCursorTo(cursorIndex);
-        }
-
-        // History recall can swap in a buffer of an arbitrarily different length
-        // than what's currently on screen (unlike the tail redraws above, where
-        // every caller changes the length by exactly one), so the erase has to
-        // cover however much longer the previously-displayed line was.
-        void RedrawAllFromStart(int previousLength)
-        {
-            MoveCursorTo(0);
-            var content = buffer.ToString();
-            var eraseCount = Math.Max(previousLength - content.Length, 0) + 1;
-            io.Write(content + new string(' ', eraseCount));
-            MoveCursorTo(cursorIndex);
-        }
-
-        // Establish the baseline cursor position explicitly rather than relying
-        // on Write's side effect — every subsequent move is computed from here.
-        MoveCursorTo(cursorIndex);
 
         while (true)
         {
             var key = io.ReadKey();
 
-            if (!char.IsControl(key.KeyChar))
+            lock (_lock)
             {
-                buffer.Insert(cursorIndex, key.KeyChar);
-                cursorIndex++;
-                RedrawTailFrom(cursorIndex - 1);
-                continue;
-            }
-
-            switch (key.Key)
-            {
-                case ConsoleKey.Backspace:
-                    if (cursorIndex == 0)
-                    {
-                        break;
-                    }
-
-                    buffer.Remove(cursorIndex - 1, 1);
-                    cursorIndex--;
-                    RedrawTailFrom(cursorIndex);
-                    break;
-
-                case ConsoleKey.Delete:
-                    if (cursorIndex == buffer.Length)
-                    {
-                        break;
-                    }
-
-                    buffer.Remove(cursorIndex, 1);
-                    RedrawTailFrom(cursorIndex);
-                    break;
-
-                case ConsoleKey.LeftArrow:
-                    cursorIndex = Math.Max(0, cursorIndex - 1);
-                    MoveCursorTo(cursorIndex);
-                    break;
-
-                case ConsoleKey.RightArrow:
-                    cursorIndex = Math.Min(buffer.Length, cursorIndex + 1);
-                    MoveCursorTo(cursorIndex);
-                    break;
-
-                case ConsoleKey.Home:
-                    cursorIndex = 0;
-                    MoveCursorTo(cursorIndex);
-                    break;
-
-                case ConsoleKey.End:
-                    cursorIndex = buffer.Length;
-                    MoveCursorTo(cursorIndex);
-                    break;
-
-                case ConsoleKey.UpArrow:
+                if (!char.IsControl(key.KeyChar))
                 {
-                    if (_history.Count == 0)
-                    {
-                        break;
-                    }
-
-                    if (_historyIndex is null)
-                    {
-                        _historyIndex = _history.Count - 1;
-                    }
-                    else if (_historyIndex > 0)
-                    {
-                        _historyIndex--;
-                    }
-                    else
-                    {
-                        break;
-                    }
-
-                    var previousLength = buffer.Length;
-                    buffer.Clear();
-                    buffer.Append(_history[_historyIndex.Value]);
-                    cursorIndex = buffer.Length;
-                    RedrawAllFromStart(previousLength);
-                    break;
+                    _buffer.Insert(_cursorIndex, key.KeyChar);
+                    _cursorIndex++;
+                    RedrawTailFrom(_cursorIndex - 1);
+                    continue;
                 }
 
-                case ConsoleKey.DownArrow:
+                switch (key.Key)
                 {
-                    if (_historyIndex is null)
+                    case ConsoleKey.Backspace:
+                        if (_cursorIndex == 0)
+                        {
+                            break;
+                        }
+
+                        _buffer.Remove(_cursorIndex - 1, 1);
+                        _cursorIndex--;
+                        RedrawTailFrom(_cursorIndex);
+                        break;
+
+                    case ConsoleKey.Delete:
+                        if (_cursorIndex == _buffer.Length)
+                        {
+                            break;
+                        }
+
+                        _buffer.Remove(_cursorIndex, 1);
+                        RedrawTailFrom(_cursorIndex);
+                        break;
+
+                    case ConsoleKey.LeftArrow:
+                        _cursorIndex = Math.Max(0, _cursorIndex - 1);
+                        MoveCursorTo(_cursorIndex);
+                        break;
+
+                    case ConsoleKey.RightArrow:
+                        _cursorIndex = Math.Min(_buffer.Length, _cursorIndex + 1);
+                        MoveCursorTo(_cursorIndex);
+                        break;
+
+                    case ConsoleKey.Home:
+                        _cursorIndex = 0;
+                        MoveCursorTo(_cursorIndex);
+                        break;
+
+                    case ConsoleKey.End:
+                        _cursorIndex = _buffer.Length;
+                        MoveCursorTo(_cursorIndex);
+                        break;
+
+                    case ConsoleKey.UpArrow:
                     {
+                        if (_history.Count == 0)
+                        {
+                            break;
+                        }
+
+                        if (_historyIndex is null)
+                        {
+                            _historyIndex = _history.Count - 1;
+                        }
+                        else if (_historyIndex > 0)
+                        {
+                            _historyIndex--;
+                        }
+                        else
+                        {
+                            break;
+                        }
+
+                        var previousLength = _buffer.Length;
+                        _buffer.Clear();
+                        _buffer.Append(_history[_historyIndex.Value]);
+                        _cursorIndex = _buffer.Length;
+                        RedrawAllFromStart(previousLength);
                         break;
                     }
 
-                    var previousLength = buffer.Length;
-
-                    if (_historyIndex < _history.Count - 1)
+                    case ConsoleKey.DownArrow:
                     {
-                        _historyIndex++;
-                        buffer.Clear();
-                        buffer.Append(_history[_historyIndex.Value]);
-                    }
-                    else
-                    {
-                        _historyIndex = null;
-                        buffer.Clear();
+                        if (_historyIndex is null)
+                        {
+                            break;
+                        }
+
+                        var previousLength = _buffer.Length;
+
+                        if (_historyIndex < _history.Count - 1)
+                        {
+                            _historyIndex++;
+                            _buffer.Clear();
+                            _buffer.Append(_history[_historyIndex.Value]);
+                        }
+                        else
+                        {
+                            _historyIndex = null;
+                            _buffer.Clear();
+                        }
+
+                        _cursorIndex = _buffer.Length;
+                        RedrawAllFromStart(previousLength);
+                        break;
                     }
 
-                    cursorIndex = buffer.Length;
-                    RedrawAllFromStart(previousLength);
-                    break;
+                    case ConsoleKey.Enter:
+                        io.Write(Environment.NewLine);
+                        var result = _buffer.ToString();
+                        if (result.Length > 0 && (_history.Count == 0 || _history[^1] != result))
+                        {
+                            _history.Add(result);
+                        }
+
+                        _active = false;
+                        return result;
                 }
-
-                case ConsoleKey.Enter:
-                    io.Write(Environment.NewLine);
-                    var result = buffer.ToString();
-                    if (result.Length > 0 && (_history.Count == 0 || _history[^1] != result))
-                    {
-                        _history.Add(result);
-                    }
-
-                    return result;
             }
         }
+    }
+
+    /// <summary>
+    /// Prints a message from outside the normal key-reading loop (e.g. a background
+    /// watcher's alert) without corrupting an in-progress line: erases the prompt and
+    /// whatever has been typed so far, writes the message, then redraws both.
+    /// Assumes the prompt always starts at column 0, which holds for every caller in
+    /// this app (each ReadLine follows a newline) — alerts don't need to track an
+    /// arbitrary start column to stay correct.
+    /// </summary>
+    public void NotifyExternal(string message)
+    {
+        lock (_lock)
+        {
+            if (!_active)
+            {
+                io.Write(message + Environment.NewLine);
+                return;
+            }
+
+            var totalLength = _prompt.Length + _buffer.Length;
+            var rows = Math.Max(1, (totalLength + io.WindowWidth - 1) / io.WindowWidth);
+
+            io.CursorLeft = 0;
+            io.CursorTop = _promptStartTop;
+            io.Write(new string(' ', rows * io.WindowWidth));
+
+            io.CursorLeft = 0;
+            io.CursorTop = _promptStartTop;
+            io.Write(message + Environment.NewLine);
+
+            _promptStartTop = io.CursorTop;
+            io.Write(_prompt);
+            _promptEndLeft = io.CursorLeft;
+            _promptEndTop = io.CursorTop;
+            io.Write(_buffer.ToString());
+
+            MoveCursorTo(_cursorIndex);
+        }
+    }
+
+    private void MoveCursorTo(int i)
+    {
+        var col = _promptEndLeft + i;
+        var row = _promptEndTop + col / io.WindowWidth;
+        col %= io.WindowWidth;
+        io.CursorLeft = col;
+        io.CursorTop = row;
+    }
+
+    private void RedrawTailFrom(int i)
+    {
+        io.Write(_buffer.ToString(i, _buffer.Length - i) + " ");
+        MoveCursorTo(_cursorIndex);
+    }
+
+    // History recall can swap in a buffer of an arbitrarily different length
+    // than what's currently on screen (unlike the tail redraws above, where
+    // every caller changes the length by exactly one), so the erase has to
+    // cover however much longer the previously-displayed line was.
+    private void RedrawAllFromStart(int previousLength)
+    {
+        MoveCursorTo(0);
+        var content = _buffer.ToString();
+        var eraseCount = Math.Max(previousLength - content.Length, 0) + 1;
+        io.Write(content + new string(' ', eraseCount));
+        MoveCursorTo(_cursorIndex);
     }
 }

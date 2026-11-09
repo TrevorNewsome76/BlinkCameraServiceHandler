@@ -35,7 +35,15 @@ namespace BlinkCameraCall
             var shellLineEditor = new ShellLineEditor(new SystemConsoleIO());
             var shellSession = new ShellSession(blinkLibrary);
 
-            AttemptAutoLogin(blinkLibrary, settings);
+            Action<string> alertSink = (Console.IsInputRedirected || Console.IsOutputRedirected)
+                ? (msg => Console.WriteLine(msg))
+                : (msg =>
+                {
+                    Console.Beep();
+                    shellLineEditor.NotifyExternal(msg);
+                });
+
+            AttemptAutoLogin(blinkLibrary, settings, alertSink);
 
             bool quitNow = false;
             while (!quitNow)
@@ -75,6 +83,7 @@ namespace BlinkCameraCall
                                     ? blinkLibrary.Login()
                                     : blinkLibrary.Login(command.Arguments));
                                 SaveCredentialsIfLoggedIn(blinkLibrary, settings);
+                                TryAutoStartWatch(blinkLibrary, alertSink);
                                 break;
 
                             case "logout":
@@ -83,6 +92,7 @@ namespace BlinkCameraCall
                             case "verify":
                                 Console.WriteLine(blinkLibrary.VerifyPin(command.Arguments));
                                 SaveCredentialsIfLoggedIn(blinkLibrary, settings);
+                                TryAutoStartWatch(blinkLibrary, alertSink);
                                 break;
                             case "quit":
                             case "exit":
@@ -116,6 +126,12 @@ namespace BlinkCameraCall
                             case "trigger":
                                 Console.WriteLine(shellSession.Trigger());
                                 break;
+                            case "watch":
+                                Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink));
+                                break;
+                            case "unwatch":
+                                Console.WriteLine(blinkLibrary.Unwatch());
+                                break;
                             case "download":
                                 Console.WriteLine(command.BareDownload
                                     ? shellSession.DownloadByName(command.Arguments![0])
@@ -141,6 +157,8 @@ namespace BlinkCameraCall
                                 Console.WriteLine("CD <name>|..|\\                   Changes directory between hubs and devices.");
                                 Console.WriteLine("LS                                Lists hubs, devices, or a device's media, depending on where you are.");
                                 Console.WriteLine("TRIGGER                          Takes a fresh snapshot of the current device (cd into one first).");
+                                Console.WriteLine("WATCH -s<seconds>                Watches for new doorbell/motion events in the background (default 20s).");
+                                Console.WriteLine("UNWATCH                          Stops watching for new events.");
                                 Console.WriteLine("DOWNLOAD <name>                  Downloads a media item by the name LS showed (device directory only).");
                                 Console.WriteLine("LOCALCLIPS -n<syncmodule>        Lists a sync module's SD-card manifest.");
                                 Console.WriteLine("LOCALDOWNLOAD -i<id> -n<sync>    Downloads an SD-card clip (id from LOCALCLIPS) to media/.");
@@ -170,7 +188,13 @@ namespace BlinkCameraCall
         private const string PlaceholderPassword = "PAssword";
         private const int MaxVerificationAttempts = 3;
 
-        private static void AttemptAutoLogin(BlinkLibrary blinkLibrary, IBlinkSettings settings)
+        private static void TryAutoStartWatch(BlinkLibrary blinkLibrary, Action<string> alertSink)
+        {
+            if (blinkLibrary.IsLoggedIn)
+                Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink));
+        }
+
+        private static void AttemptAutoLogin(BlinkLibrary blinkLibrary, IBlinkSettings settings, Action<string> alertSink)
         {
             if (string.IsNullOrEmpty(settings.Email) || string.IsNullOrEmpty(settings.Password))
                 return;
@@ -202,6 +226,7 @@ namespace BlinkCameraCall
             }
 
             SaveCredentialsIfLoggedIn(blinkLibrary, settings);
+            TryAutoStartWatch(blinkLibrary, alertSink);
         }
 
         private static void SaveCredentialsIfLoggedIn(BlinkLibrary blinkLibrary, IBlinkSettings settings)

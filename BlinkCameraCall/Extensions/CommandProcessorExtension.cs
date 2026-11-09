@@ -25,6 +25,8 @@ public static class CommandProcessorExtension
         "cd",
         "ls",
         "trigger",
+        "watch",
+        "unwatch",
     };
 
     private static readonly string[] BarePositionalCommands = new[]

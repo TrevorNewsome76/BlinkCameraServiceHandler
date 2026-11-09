@@ -196,4 +196,45 @@ public class UnitTest_ShellLineEditor
         //assert
         fifthResult.Should().Be("a");
     }
+
+    [Fact]
+    public void Test_NotifyExternal_WhileIdle_JustWritesTheMessage()
+    {
+        //assign
+        var fake = new FakeConsoleIO([]);
+        var editor = new ShellLineEditor(fake);
+
+        //act
+        editor.NotifyExternal("[ALERT] Front door bell");
+
+        //assert
+        fake.WrittenText.Should().ContainSingle().Which.Should().Be("[ALERT] Front door bell" + Environment.NewLine);
+    }
+
+    [Fact]
+    public void Test_NotifyExternal_DuringInProgressLine_PrintsAlertAndPreservesTypedText()
+    {
+        //assign
+        var fake = new BlockingFakeConsoleIO();
+        var editor = new ShellLineEditor(fake);
+        var timeout = TimeSpan.FromSeconds(5);
+
+        fake.Enqueue(Keys.Char('c'));
+        fake.Enqueue(Keys.Char('d'));
+
+        var readLineTask = Task.Run(() => editor.ReadLine("> "));
+
+        //act
+        fake.WaitForReadKeyCalls(3, timeout); // 'c' dispatched, 'd' dispatched, now idle waiting for a 3rd key
+        editor.NotifyExternal("[ALERT] Front door bell");
+        fake.Enqueue(Keys.Char('x'));
+        fake.Enqueue(Keys.Enter);
+        var result = readLineTask.Wait(timeout) ? readLineTask.Result : throw new TimeoutException("ReadLine never returned.");
+
+        //assert
+        result.Should().Be("cdx");
+        var alertIndex = fake.WrittenText.FindIndex(t => t.Contains("[ALERT] Front door bell"));
+        alertIndex.Should().BeGreaterThan(-1);
+        fake.WrittenText.Skip(alertIndex + 1).Should().ContainInOrder("> ", "cd");
+    }
 }

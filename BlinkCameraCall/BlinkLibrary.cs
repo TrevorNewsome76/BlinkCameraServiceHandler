@@ -1,4 +1,5 @@
-﻿using BlinkCameraCall.Extensions;
+﻿using BlinkCameraCall.Driver;
+using BlinkCameraCall.Extensions;
 using BlinkCommon.Interfaces;
 using BlinkCommon.Interfaces.Auth;
 using BlinkCommon.Interfaces.System;
@@ -11,6 +12,7 @@ public class BlinkLibrary(IAdapter adapter)
     private ISessionDetails _sessionDetails = Duck.Implement<ISessionDetails>(new()).Initialize();
     private List<ICloudMediaItem>? _lastCloudMedia;
     private (long SyncModuleId, long ManifestId, List<ILocalStorageClip> Clips)? _lastLocalManifest;
+    private CancellationTokenSource? _watchCts;
 
     public ISessionDetails? CurrentSession => _sessionDetails.LoggedInStatus ? _sessionDetails : null;
 
@@ -59,6 +61,7 @@ public class BlinkLibrary(IAdapter adapter)
     {
         if (_sessionDetails.LoggedInStatus)
         {
+            StopWatch();
             _sessionDetails.LoggedInStatus = false;
             ILogoutResponse logoutResult =
                 adapter.Logout(_sessionDetails.Account ?? Duck.Implement<IAuthAccount>(new()));
@@ -220,6 +223,48 @@ public class BlinkLibrary(IAdapter adapter)
         _lastCloudMedia = (response?.Media ?? new List<ICloudMediaItem>()).Where(m => !m.Deleted).ToList();
 
         return _lastCloudMedia.ToCloudMediaListString(hours);
+    }
+
+    public string Watch(string[] arguments, Action<string> onAlert)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_watchCts is not null)
+            return "Already watching. Use UNWATCH to stop.";
+
+        var intervalSeconds = arguments.ExtractWatchIntervalSeconds();
+        var account = _sessionDetails.Account!;
+        var cts = new CancellationTokenSource();
+        _watchCts = cts;
+
+        Task.Run(() => EventWatchPolling.Run(
+            adapter,
+            account,
+            item => onAlert($"[ALERT] New event: {item.Device_Name} at {item.Created_At:yyyy-MM-dd HH:mm:ss} UTC (id {item.Id})"),
+            ex => onAlert($"[WATCH] Error checking for new events: {ex.Message}"),
+            cts.Token,
+            TimeSpan.FromSeconds(intervalSeconds)));
+
+        return $"Watching for new events every {intervalSeconds}s. Use UNWATCH to stop.";
+    }
+
+    public string Unwatch()
+    {
+        if (_watchCts is null)
+            return "Not currently watching.";
+
+        StopWatch();
+        return "Stopped watching.";
+    }
+
+    private void StopWatch()
+    {
+        if (_watchCts is null)
+            return;
+
+        _watchCts.Cancel();
+        _watchCts = null;
     }
 
     public string Download(string[] arguments, string? mediaDirectory = null)

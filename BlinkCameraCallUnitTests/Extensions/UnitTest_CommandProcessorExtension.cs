@@ -220,4 +220,39 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
         //assert
         actualResult.Should().BeEquivalentTo(expectedResult);
     }
+
+    [Fact]
+    public void Test_CommandSplitWatch_WithIntervalFlag_IsValid()
+    {
+        //assign
+        string consoleCommand = "watch -s30";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "watch",
+            Arguments = new string[] { "s30" },
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitUnwatch_NoArguments_IsValid()
+    {
+        //assign
+        string consoleCommand = "unwatch";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "unwatch",
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
 }
