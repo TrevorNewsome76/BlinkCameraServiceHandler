@@ -20,7 +20,7 @@ namespace BlinkCameraCall
 
             var settings = Duck.Implement<IBlinkSettings>(new());
             settings.Load($"{AppContext.BaseDirectory}");
-            Console.WriteLine($"Using settings file: {AppContext.BaseDirectory}settings.json");
+            Console.WriteLine($"Using settings file: {AppContext.BaseDirectory}config.json");
 
             if (string.IsNullOrEmpty(settings.HardwareId))
             {

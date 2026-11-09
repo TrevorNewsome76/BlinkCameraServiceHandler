@@ -25,9 +25,9 @@ See the install script in [`scripts/install.ps1`](../scripts/install.ps1) and th
 "Install / uninstall" section below. You can also just build and run it from source
 with `dotnet run --project BlinkCameraCall` if you have the .NET 8 SDK.
 
-## First run: `settings.json`
+## First run: `config.json`
 
-On first run the app creates (next to the executable) a `settings.json` holding your
+On first run the app creates (next to the executable) a `config.json` holding your
 credentials and a persisted device id:
 
 ```json
@@ -64,7 +64,7 @@ Type commands at the prompt, one per line, and press Enter.
 
 ### Automatic login
 
-If `settings.json` already has a real `Email`/`Password` (not the shipped
+If `config.json` already has a real `Email`/`Password` (not the shipped
 placeholders), the app logs in automatically at startup instead of waiting
 for you to type `LOGIN`:
 
@@ -99,15 +99,15 @@ Authentication failed. Check settings in config.
 After that it drops you at the normal prompt, not logged in — run `LOGIN`
 manually when you're ready. Whenever a login fully succeeds (automatic or
 manual), the email/password that were actually used are saved back into
-`settings.json`, so a successful manual `LOGIN -u<email> -p<password>` the
+`config.json`, so a successful manual `LOGIN -u<email> -p<password>` the
 first time sets you up for automatic login on every run after that.
 
 ## Commands
 
 | Command | Syntax | What it does |
 |---|---|---|
-| Login (using settings.json) | `LOGIN` | Logs in with the `Email`/`Password` already in `settings.json`. |
-| Login (explicit credentials) | `LOGIN -u<email> -p<password>` | Logs in with the given email/password instead of what's in `settings.json`. No space between `-u`/`-p` and the value. |
+| Login (using config.json) | `LOGIN` | Logs in with the `Email`/`Password` already in `config.json`. |
+| Login (explicit credentials) | `LOGIN -u<email> -p<password>` | Logs in with the given email/password instead of what's in `config.json`. No space between `-u`/`-p` and the value. |
 | Verify a code | `VERIFY -v<code>` | Enters a verification code. Does one of two things depending on what just happened (see "Two-factor logins" below): completes a pending two-factor login, or verifies an old-style client-trust PIN. |
 | Get home screen info | `GET -ihome` | Fetches your account's networks, sync modules, cameras and doorbells. Requires being logged in first. |
 | Show a device map | `MAP` | Fetches the same data as `GET -ihome` and prints it as a readable tree: each network, with its sync module, cameras and doorbells nested underneath, each showing online/armed/enabled status, battery, wifi signal and firmware version. Requires being logged in first. |
@@ -368,7 +368,7 @@ VERIFY -v123456
 
 | Message | What it means |
 |---|---|
-| `Login to the Blink Service failed: Invalid credentials` | The email/password Blink received didn't match an account. Check `settings.json` or what you typed on the `LOGIN` line. |
+| `Login to the Blink Service failed: Invalid credentials` | The email/password Blink received didn't match an account. Check `config.json` or what you typed on the `LOGIN` line. |
 | `...Blink sent a two-factor verification code...` | Expected on an untrusted device - see "Two-factor logins" above. |
 | `...Blink did not confirm the verification code (...)` | The code was wrong, expired, or already used. Request a fresh one by running `LOGIN` again, or just retry `VERIFY` if it hasn't been too long. |
 | `...Blink rejected the sign-in request (...)` / `...did not return an authorization code...` | Something changed on Blink's side of the login flow. This includes the raw response Blink sent, which is the most useful thing to include if you need to debug or report this. |

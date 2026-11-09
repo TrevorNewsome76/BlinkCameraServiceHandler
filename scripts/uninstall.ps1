@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Removes -InstallPath from the current user's PATH, then removes the installed
-    files. By default settings.json (which holds your Blink email/password and
+    files. By default config.json (which holds your Blink email/password and
     device id) is kept on disk even though everything else is removed - pass
     -RemoveSettings to delete it too.
 
@@ -13,12 +13,12 @@
     (must match what was passed to install.ps1, if anything non-default was used).
 
 .PARAMETER RemoveSettings
-    Also delete settings.json (and therefore your saved Blink credentials and
-    HardwareId) and the now-empty install folder. Without this switch, settings.json
+    Also delete config.json (and therefore your saved Blink credentials and
+    HardwareId) and the now-empty install folder. Without this switch, config.json
     is left behind and the rest of the folder's contents are removed around it.
 
 .PARAMETER Force
-    Skip the confirmation prompt that is otherwise shown when settings.json is about
+    Skip the confirmation prompt that is otherwise shown when config.json is about
     to be deleted.
 
 .EXAMPLE
@@ -60,7 +60,7 @@ if (-not (Test-Path $InstallPath)) {
     exit 0
 }
 
-$settingsPath = Join-Path $InstallPath "settings.json"
+$settingsPath = Join-Path $InstallPath "config.json"
 $hasSettings = Test-Path $settingsPath
 
 if ($hasSettings -and -not $RemoveSettings) {

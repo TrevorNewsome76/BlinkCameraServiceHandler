@@ -13,14 +13,14 @@ public class UnitTestSettings(ITestOutputHelper output)
 
     private void HelperMethod_RemoveSettingsFile(string path)
     {
-        if (File.Exists($"{path}settings.json")) File.Delete($"{path}settings.json");
-        Assert.True(!File.Exists($"{path}settings.json"));
+        if (File.Exists($"{path}config.json")) File.Delete($"{path}config.json");
+        Assert.True(!File.Exists($"{path}config.json"));
     }
 
     private void HelperMethod_CreateDefaultSettingsFile(string path)
     {
-        File.WriteAllText($"{path}settings.json", MockSettings.CreateSettings().Serialize());
-        Assert.True(File.Exists($"{path}settings.json"));
+        File.WriteAllText($"{path}config.json", MockSettings.CreateSettings().Serialize());
+        Assert.True(File.Exists($"{path}config.json"));
     }
 
 
@@ -38,7 +38,7 @@ public class UnitTestSettings(ITestOutputHelper output)
         actualResult.Load(AppContext.BaseDirectory);
 
         // assert
-        Assert.True(!File.Exists($"{path}settings.json"));
+        Assert.True(!File.Exists($"{path}config.json"));
         actualResult.Should().BeEquivalentTo(expectedResult);
     }
 
@@ -58,11 +58,11 @@ public class UnitTestSettings(ITestOutputHelper output)
         actualResult.Load(AppContext.BaseDirectory);
         
         // assert
-        Assert.True(File.Exists($"{path}settings.json"));
+        Assert.True(File.Exists($"{path}config.json"));
         actualResult.Should().BeEquivalentTo(expectedResult);
 
         // output
-        output.WriteLine($"url: {path}settings.json");
+        output.WriteLine($"url: {path}config.json");
 
         // Clear up
         HelperMethod_RemoveSettingsFile(path);
@@ -84,7 +84,7 @@ public class UnitTestSettings(ITestOutputHelper output)
         actualResult.Load(AppContext.BaseDirectory);
 
         // assert
-        Assert.True(File.Exists($"{path}settings.json"));
+        Assert.True(File.Exists($"{path}config.json"));
         actualResult.Should().BeEquivalentTo(expectedResult);
 
         // Clear up
@@ -108,7 +108,7 @@ public class UnitTestSettings(ITestOutputHelper output)
         actualResult.Load(AppContext.BaseDirectory);
 
         // assert
-        Assert.True(File.Exists($"{path}settings.json"));
+        Assert.True(File.Exists($"{path}config.json"));
         actualResult.Should().BeEquivalentTo(expectedResult);
 
         // Clear up

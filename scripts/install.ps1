@@ -7,9 +7,9 @@
     adds a short "blink.cmd" wrapper next to it, and (unless -NoPath is given) adds
     that folder to the current user's PATH so "blink" works from any terminal.
 
-    Does NOT touch settings.json if one already exists in -InstallPath - your saved
+    Does NOT touch config.json if one already exists in -InstallPath - your saved
     credentials and HardwareId (see docs/USER_GUIDE.md) are left alone. The app
-    creates settings.json itself on first run if none exists yet.
+    creates config.json itself on first run if none exists yet.
 
 .PARAMETER InstallPath
     Where to publish the app. Defaults to "$env:LOCALAPPDATA\BlinkCameraServiceHandler".
@@ -52,7 +52,7 @@ catch {
 Write-Host "Publishing BlinkCameraCall ($Configuration) to '$InstallPath' ..."
 New-Item -ItemType Directory -Force -Path $InstallPath | Out-Null
 
-$settingsBackup = Join-Path $InstallPath "settings.json"
+$settingsBackup = Join-Path $InstallPath "config.json"
 $hadExistingSettings = Test-Path $settingsBackup
 
 dotnet publish $projectPath `
@@ -66,10 +66,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if ($hadExistingSettings -and -not (Test-Path $settingsBackup)) {
-    Write-Warning "settings.json existed before publish but is missing afterwards - this should not happen; check '$InstallPath' manually."
+    Write-Warning "config.json existed before publish but is missing afterwards - this should not happen; check '$InstallPath' manually."
 }
 elseif ($hadExistingSettings) {
-    Write-Host "Existing settings.json in '$InstallPath' was left untouched."
+    Write-Host "Existing config.json in '$InstallPath' was left untouched."
 }
 
 $wrapperPath = Join-Path $InstallPath "blink.cmd"
@@ -111,4 +111,4 @@ Write-Host "Install complete."
 Write-Host "Run it with:  blink          (new terminal, if added to PATH)"
 Write-Host "          or: $InstallPath\BlinkCameraCall.exe"
 Write-Host ""
-Write-Host "First run creates settings.json in that folder - see docs\USER_GUIDE.md to configure your Blink login."
+Write-Host "First run creates config.json in that folder - see docs\USER_GUIDE.md to configure your Blink login."

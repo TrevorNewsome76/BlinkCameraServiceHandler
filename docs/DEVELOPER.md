@@ -122,7 +122,7 @@ Program.cs (REPL loop)
 
 ## 5. Settings and persistence (`BlinkCameraCall/Extensions/SettingsFileExtension.cs`)
 
-`settings.json` lives next to the executable (`AppContext.BaseDirectory`) and holds:
+`config.json` lives next to the executable (`AppContext.BaseDirectory`) and holds:
 
 ```json
 { "Email": "...", "Password": "...", "BaseUrl": "https://rest-prod.immedia-semi.com", "HardwareId": "..." }
@@ -239,13 +239,13 @@ has: if the last login attempt is not logged in yet but set
 `AuthCompleteTwoFactorLogin`; otherwise it falls through to the old client-trust
 `AuthVerifyPin` flow (§6.5).
 
-### 6.4 Why `HardwareId` is persisted in `settings.json`
+### 6.4 Why `HardwareId` is persisted in `config.json`
 
 Blink ties a two-factor "trust" decision to a `hardware_id` (a UUID identifying the
 "device"). If a fresh random UUID were generated on every login (which is what the
 first version of this fix did), Blink would see a "new device" every single run and
 demand a two-factor code every single time. `Program.cs` therefore generates the
-UUID once, the first time it's missing, and saves it back to `settings.json`
+UUID once, the first time it's missing, and saves it back to `config.json`
 immediately - so the same "device" identity is reused on every subsequent run, and
 (per Blink's own behaviour) two-factor prompts should become occasional rather than
 constant. `OAuthLoginClient.Login` still falls back to generating a one-off random
@@ -291,7 +291,7 @@ manually — it's pure orchestration on top of the existing primitives:
   since `ApiTransactions` carries the original username/password through
   `_pendingUsername`/`_pendingPassword` (§6.3) into `MapLoginResult`'s
   `Auth` object regardless of which path completed it — and writes them
-  into `settings.json`. This is how a first manual `LOGIN -u<email> -p<password>`
+  into `config.json`. This is how a first manual `LOGIN -u<email> -p<password>`
   (optionally completed with `VERIFY -v<code>`) becomes tomorrow's automatic
   login: nothing has to explicitly "remember" which flow was used.
 
@@ -576,7 +576,7 @@ or deliberately decide to still skip:
   page's markup, `ExtractCsrfToken`/`ExtractTsvState`/`ExtractRedirectUrl` are the
   first things to re-check, and each failure path already reports Blink's raw
   response body for exactly this reason.
-- **`settings.json` stores the account password and device id in plain text** next
+- **`config.json` stores the account password and device id in plain text** next
   to the executable. Acceptable for a personal single-user console tool; not
   acceptable to redistribute as-is.
 - **The `CommandProcessorExtension` class (in `BlinkCameraCall/Extensions/`) is

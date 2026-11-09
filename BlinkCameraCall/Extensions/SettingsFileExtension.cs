@@ -16,8 +16,8 @@ public static class SettingsFileExtension
             HardwareId = string.Empty,
         });
 
-        if (File.Exists($"{path}settings.json"))
-            fileSettings = File.ReadAllText($"{path}settings.json").Deserialize<IBlinkSettings>();
+        if (File.Exists($"{path}config.json"))
+            fileSettings = File.ReadAllText($"{path}config.json").Deserialize<IBlinkSettings>();
 
         settings.BaseUrl = fileSettings.BaseUrl;
         settings.Email = fileSettings.Email;
@@ -26,5 +26,5 @@ public static class SettingsFileExtension
     }
 
     public static void Save(this IBlinkSettings settings, string path) =>
-        File.WriteAllText($"{path}settings.json", settings.Serialize());
+        File.WriteAllText($"{path}config.json", settings.Serialize());
 }

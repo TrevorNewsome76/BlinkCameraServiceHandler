@@ -52,7 +52,7 @@ BlinkCameraCallUnitTests/obj/project.nuget.cache
 .vs/BlinkCameraCall/FileContentIndex/260a7302-bf51-4962-a850-027b1b73ece6.vsidx
 .vs/BlinkCameraCall/FileContentIndex/bc49a5fa-36f0-4f7e-a9e2-4e50a58caf45.vsidx
 .vs/BlinkCameraServiceHandler/v17/.wsuo
-/Settings.json
+/Config.json
 /.vs/BlinkCameraCall/FileContentIndex
 /BlinkCameraCall/bin/Debug/net8.0
 /BlinkCameraCallUnitTests/bin/Debug/net8.0
@@ -67,7 +67,7 @@ BlinkCameraCallUnitTests/obj/project.nuget.cache
 *.bin
 *.bin
 *.bin
-Settings.bak.json
+Config.bak.json
 *.bin
 .vs/ProjectEvaluation/blinkcameracall.metadata.v7.bin
 .vs/ProjectEvaluation/blinkcameracall.projects.v7.bin
@@ -76,7 +76,7 @@ Settings.bak.json
 .vs/ProjectEvaluation/blinkcameracall.projects.v7.bin
 .vs/ProjectEvaluation/blinkcameracall.metadata.v7.bin
 *.user
-BlinkCameraCall/settings.json
+BlinkCameraCall/config.json
 *.bin
 *.bin
 *.bin
