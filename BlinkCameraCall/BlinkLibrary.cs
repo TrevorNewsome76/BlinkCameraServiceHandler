@@ -197,6 +197,114 @@ public class BlinkLibrary(IAdapter adapter)
         return $"{(arm ? "Armed" : "Disarmed")} '{deviceName}'.";
     }
 
+    public string Arm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        var (lines, succeeded, total) = ArmOrDisarmNetwork(network, arm: true, pollInterval, maxRetries);
+        lines.Add($"Armed hub '{network.Name}' ({succeeded}/{total} succeeded).");
+        RefreshDeviceLists();
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    public string Disarm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        var (lines, succeeded, total) = ArmOrDisarmNetwork(network, arm: false, pollInterval, maxRetries);
+        lines.Add($"Disarmed hub '{network.Name}' ({succeeded}/{total} succeeded).");
+        RefreshDeviceLists();
+
+        return string.Join(Environment.NewLine, lines);
+    }
+
+    private (List<string> Lines, int Succeeded, int Total) ArmOrDisarmNetwork(IHomeScreenNetwork network, bool arm, TimeSpan? pollInterval, int maxRetries)
+    {
+        var lines = new List<string>();
+        var succeeded = 0;
+        var total = 0;
+        var account = _sessionDetails.Account!;
+        var verb = arm ? "arming" : "disarming";
+        var done = arm ? "armed" : "disarmed";
+
+        total++;
+        try
+        {
+            var networkResult = arm
+                ? adapter.ArmNetwork(account, network.Id, pollInterval, maxRetries)
+                : adapter.DisarmNetwork(account, network.Id, pollInterval, maxRetries);
+
+            if (networkResult is not null)
+            {
+                lines.Add($"Hub '{network.Name}': {done}.");
+                succeeded++;
+            }
+            else
+            {
+                lines.Add($"Hub '{network.Name}': Blink did not finish {verb} '{network.Name}' in time.");
+            }
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"Hub '{network.Name}': {ex.Message}");
+        }
+
+        foreach (var camera in (_sessionDetails.Cameras ?? new List<IHomeScreenCamera>()).Where(c => c.Network_Id == network.Id))
+        {
+            total++;
+            try
+            {
+                var result = arm
+                    ? adapter.EnableCamera(account, camera.Network_Id, camera.id, pollInterval, maxRetries)
+                    : adapter.DisableCamera(account, camera.Network_Id, camera.id, pollInterval, maxRetries);
+
+                if (result is not null)
+                {
+                    lines.Add($"  Camera '{camera.Name}': {done}.");
+                    succeeded++;
+                }
+                else
+                {
+                    lines.Add($"  Camera '{camera.Name}': Blink did not finish {verb} '{camera.Name}' in time.");
+                }
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"  Camera '{camera.Name}': {ex.Message}");
+            }
+        }
+
+        foreach (var doorbell in (_sessionDetails.Doorbells ?? new List<IHomeScreenDoorbells>()).Where(d => d.Network_Id == network.Id))
+        {
+            total++;
+            try
+            {
+                var result = arm
+                    ? adapter.EnableDoorbell(account, doorbell.Network_Id, doorbell.Id, pollInterval, maxRetries)
+                    : adapter.DisableDoorbell(account, doorbell.Network_Id, doorbell.Id, pollInterval, maxRetries);
+
+                if (result is not null)
+                {
+                    lines.Add($"  Doorbell '{doorbell.Name}': {done}.");
+                    succeeded++;
+                }
+                else
+                {
+                    lines.Add($"  Doorbell '{doorbell.Name}': Blink did not finish {verb} '{doorbell.Name}' in time.");
+                }
+            }
+            catch (Exception ex)
+            {
+                lines.Add($"  Doorbell '{doorbell.Name}': {ex.Message}");
+            }
+        }
+
+        return (lines, succeeded, total);
+    }
+
     public string Device(string[] arguments)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))

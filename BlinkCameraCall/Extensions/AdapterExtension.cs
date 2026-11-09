@@ -56,6 +56,12 @@ public static class AdapterExtension
     public static ICommandStatusResponse? DisableDoorbell(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         Transactions.SystemDisableDoorbell(account, networkId, doorbellId, pollInterval, maxRetries);
 
+    public static ICommandStatusResponse? ArmNetwork(this IAdapter adapter, IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        Transactions.SystemArmNetwork(account, networkId, pollInterval, maxRetries);
+
+    public static ICommandStatusResponse? DisarmNetwork(this IAdapter adapter, IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        Transactions.SystemDisarmNetwork(account, networkId, pollInterval, maxRetries);
+
     public static IMediaChangedResponse? GetRecentMedia(this IAdapter adapter, IAuthAccount account, DateTime sinceUtc) =>
         Transactions.SystemGetRecentMedia(account, sinceUtc);
 

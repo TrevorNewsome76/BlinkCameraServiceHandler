@@ -57,6 +57,14 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":1012,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/camera/321380/disable":
                 return "{\"message\":\"system busy\"}";
+            case "https://rest-007.immedia-semi.com/network/263178/arm":
+                return "{\"id\":1020,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/disarm":
+                return "{\"id\":1021,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263310/arm":
+                return "{\"id\":1022,\"network_id\":263310,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263310/disarm":
+                return "{\"message\":\"system busy\"}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/doorbells/5009/enable":
                 return "{\"id\":1014,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/doorbells/5009/disable":
@@ -147,6 +155,12 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":1014,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/command/1015":
                 return "{\"id\":1015,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1020":
+                return "{\"id\":1020,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1021":
+                return "{\"id\":1021,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263310/command/1022":
+                return "{\"id\":1022,\"network_id\":263310,\"complete\":true,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }

@@ -273,6 +273,97 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmHub_MixedOutcome_ContinuesAndReportsEveryItem()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeFront = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Front");
+        var expected =
+            "Hub 'Home Front': armed." + Environment.NewLine +
+            "  Camera 'Pergoda': armed." + Environment.NewLine +
+            "  Camera 'Garage': Blink did not finish arming 'Garage' in time." + Environment.NewLine +
+            "  Doorbell 'Front door bell': armed." + Environment.NewLine +
+            "Armed hub 'Home Front' (3/4 succeeded).";
+
+        var actualResult = blinkLib.Arm(homeFront, TimeSpan.Zero, 1);
+
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Test_DisarmHub_NetworkItselfRejected_StillCompletesWithoutThrowing()
+    {
+        // "Home Back" (263310) has zero child devices, so this isolates the network's OWN
+        // call failing (as opposed to Test_ArmHub_MixedOutcome's child-level failure above) —
+        // its disarm fixture returns no usable id, proving the network item is caught by the
+        // same per-item try/catch as every child, not special-cased out of "continue and report".
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeBack = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Back");
+        var expected =
+            "Hub 'Home Back': Blink rejected the request: {\"message\":\"system busy\"}" + Environment.NewLine +
+            "Disarmed hub 'Home Back' (0/1 succeeded).";
+
+        var actualResult = blinkLib.Disarm(homeBack, TimeSpan.Zero, 1);
+
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Test_ArmHub_NoChildDevices_SucceedsWithOneOfOne()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeBack = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Back");
+        var expected =
+            "Hub 'Home Back': armed." + Environment.NewLine +
+            "Armed hub 'Home Back' (1/1 succeeded).";
+
+        var actualResult = blinkLib.Arm(homeBack, TimeSpan.Zero, 1);
+
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Test_ArmHub_NullCamerasAndDoorbells_DoesNotThrow()
+    {
+        // _sessionDetails.Cameras/Doorbells are null until Map()/Get() first populates them
+        // (BlinkLibrary's own Initialize() default). Hub-level Arm takes the network object
+        // directly rather than reading it from _sessionDetails.Networks, so it can be called
+        // with Cameras/Doorbells still at that default null — proving the cascading loop
+        // guards both with `?? new List<...>()` rather than assuming Map() already ran.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var homeFront = Duck.Implement<IHomeScreenNetwork>(new { Id = 263178L, Name = "Home Front", Armed = false });
+
+        var act = () => blinkLib.Arm(homeFront, TimeSpan.Zero, 1);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Test_ArmHubFailedNotLoggedIn()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeFront = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Front");
+        blinkLib.Logout();
+
+        var actualResult = blinkLib.Arm(homeFront, TimeSpan.Zero, 1);
+
+        actualResult.Should().BeEquivalentTo("Not currently logged into Blink service.");
+    }
+
+    [Fact]
     public void Test_DeviceFailedNotLoggedIn()
     {
         //assign
