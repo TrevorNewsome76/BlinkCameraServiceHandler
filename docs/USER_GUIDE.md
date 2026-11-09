@@ -6,8 +6,10 @@ small set of commands against it: login (including two-factor codes), logout,
 client-trust PIN verification, fetching your "home screen" (networks, sync
 modules, cameras, doorbells), printing a readable device map, inspecting a
 single device, triggering and downloading fresh snapshots, listing/
-downloading cloud and SD-card video clips, and navigating hubs and devices
-as a `cd`/`ls` tree instead of repeating a device name on every command.
+downloading cloud and SD-card video clips, navigating hubs and devices
+as a `cd`/`ls` tree instead of repeating a device name on every command,
+and watching for new doorbell/motion events in the background with
+console alerts.
 
 If you want to know *how* it works instead of how to use it, see
 [DEVELOPER.md](DEVELOPER.md).
@@ -102,6 +104,13 @@ manual), the email/password that were actually used are saved back into
 `config.json`, so a successful manual `LOGIN -u<email> -p<password>` the
 first time sets you up for automatic login on every run after that.
 
+Once you're logged in — automatically or manually, including right after a
+`VERIFY` that completes a two-factor challenge — the app also starts
+**watching for new doorbell/motion events in the background**, with no
+extra command needed. See
+["Watching for new events" below](#watching-for-new-events-watch--unwatch)
+for what that looks like and how to stop/restart it.
+
 ## Commands
 
 | Command | Syntax | What it does |
@@ -122,7 +131,9 @@ first time sets you up for automatic login on every run after that.
 | List current directory | `LS` | Lists hubs at the root, devices in a hub, or a device's media, depending on where you are. |
 | Trigger (current device) | `TRIGGER` | Takes a fresh snapshot of the device you're currently `cd`'d into. |
 | Download by name | `DOWNLOAD <name>` | Downloads a media item by the name `LS` showed for it (device directory only). |
-| Logout | `LOGOUT` | Logs out of the current session. |
+| Watch for new events | `WATCH [-s<seconds>]` | Starts watching for new doorbell/motion events in the background (default interval: 20 seconds). Starts automatically on login — see below. |
+| Stop watching | `UNWATCH` | Stops the background watch started by `WATCH` (or automatically on login). |
+| Logout | `LOGOUT` | Logs out of the current session (and stops any active `WATCH`). |
 | Help | `HELP` | Prints command help. |
 | Quit | `QUIT` or `EXIT` | Exits the program. |
 
@@ -314,6 +325,45 @@ Note: the exact shape of Blink's cloud-media response was reconstructed
 from a third-party open-source client rather than confirmed live, so these
 two commands are the most likely in this release to need a fix after
 real-world use — see [DEVELOPER.md](DEVELOPER.md) if that happens.
+
+## Watching for new events (`WATCH` / `UNWATCH`)
+
+`WATCH [-s<seconds>]` polls your account in the background for new
+doorbell/motion cloud events (the same data `VIDEOS` shows you on demand)
+and alerts you the moment a new one shows up — without taking over the
+shell. You can keep typing other commands while it runs:
+
+```
+BC> watch
+Watching for new events every 20s. Use UNWATCH to stop.
+BC> map
+...
+BC> [ALERT] New event: Front Door at 2026-11-09 14:32:05 UTC (id 3001)
+BC>
+```
+
+- It starts **automatically** the moment you're logged in (see "Automatic
+  login" above) — you only need to type `WATCH` yourself if you've since
+  run `UNWATCH` and want to restart it, or want a different interval.
+- `-s<seconds>` sets how often it checks (default 20). `UNWATCH` stops it;
+  running `WATCH` again afterwards (with or without `-s`) restarts it.
+- Each alert also triggers a console beep, so you'll notice it even if
+  you're not looking at the screen.
+- `LOGOUT` stops any active watch too — it won't keep polling with an
+  invalidated session after you log out.
+
+| Message | What it means |
+|---|---|
+| `Not currently logged into Blink service.` | Log in first. |
+| `Watching for new events every <seconds>s. Use UNWATCH to stop.` | Success. |
+| `Already watching. Use UNWATCH to stop.` | `WATCH` was run while one was already active. |
+| `Not currently watching.` | `UNWATCH` was run with nothing active. |
+| `Stopped watching.` | Success. |
+| `[WATCH] Error checking for new events: <message>` | A single poll failed (network hiccup, etc) — watching keeps running and retries on the next interval. |
+
+Note: like `VIDEOS`/`DOWNLOAD` (above), this polls Blink's cloud-media
+endpoint rather than receiving a live push, so there's up to one poll
+interval of delay before a real-world event shows up as an alert here.
 
 ## SD-card video clips (`LOCALCLIPS` / `LOCALDOWNLOAD`)
 

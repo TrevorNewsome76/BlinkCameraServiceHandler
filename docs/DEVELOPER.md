@@ -523,6 +523,70 @@ constructor-injected, one instance for the process.
   staleness check, because `BlinkLibrary` has no equivalent "leaving a
   sync module" event to clear on.
 
+### 7.8 The `WATCH`/`UNWATCH` commands (background event polling)
+
+`WATCH -s<seconds>` starts a background poll for new doorbell/motion cloud
+events and alerts in the console when one appears; `UNWATCH` stops it.
+Unlike every other command in this app, it does not block the REPL loop —
+the shell keeps accepting commands normally while it runs.
+
+- **Polling logic lives in `EventWatchPolling.Run`**
+  (`BlinkCameraCall/Driver/EventWatchPolling.cs`), which calls the exact
+  same `adapter.GetRecentMedia(account, sinceUtc)` as `VIDEOS` (§7.5),
+  tracks a `HashSet<long>` of clip ids already reported so the same event
+  is never alerted twice, and rolls `sinceUtc` back 30 seconds on every
+  poll as a clock-drift buffer (safe only because dedup is by id, not by
+  the `since` boundary). It follows the same shape as
+  `CommandPolling`/`ManifestPolling` (§7.3, §7.6) specifically so it can be
+  unit-tested the same way: a `maxIterations` parameter bounds the loop,
+  letting tests call it synchronously with `TimeSpan.Zero` and a small
+  iteration count instead of needing a real background thread at all.
+- **`BlinkLibrary.Watch`/`Unwatch` own a single `CancellationTokenSource`**
+  and wrap `EventWatchPolling.Run` in a real `Task.Run` for production.
+  `Watch` refuses a second call while one is already running
+  ("Already watching. Use UNWATCH to stop."), and `Logout` calls the same
+  stop path `Unwatch` does, so a watch left running doesn't keep polling
+  with an invalidated session after logging out.
+- **`Program.cs` starts it automatically** after every successful login —
+  the startup auto-login (§6.6), a manual `LOGIN`, and a completed `VERIFY`
+  2FA challenge all call a small `TryAutoStartWatch` helper once they know
+  `blinkLibrary.IsLoggedIn`. You can still stop or restart it manually with
+  `UNWATCH`/`WATCH` at any time.
+- **The one real complexity: alerting while a line is being typed.**
+  `ShellLineEditor` used to track its prompt/buffer/cursor position purely
+  as locals inside `ReadLine`, with no concurrency awareness at all — a raw
+  `Console.WriteLine` from the watch thread mid-keystroke would print into
+  the middle of your typed command and corrupt the editor's cursor math.
+  Those locals are now instance fields guarded by a `lock`, and a new
+  `NotifyExternal(message)` method takes that same lock to erase the
+  in-progress prompt+buffer, print the alert, and redraw both — restoring
+  exactly where your cursor was. `ReadLine`'s own key-handling takes the
+  same lock, but deliberately *not* around the blocking `io.ReadKey()` call
+  itself, so an alert can appear immediately instead of waiting for your
+  next keystroke. `Program.cs` picks `NotifyExternal` as the alert sink in
+  interactive mode, or a plain `Console.WriteLine` when input/output is
+  redirected (no line editor is in play there). `NotifyExternal` assumes
+  the prompt always starts at column 0, which holds for every caller in
+  this app (each `ReadLine` follows a newline) — it doesn't need to track
+  an arbitrary start column to stay correct.
+- **Alert format and sound**: `[ALERT] New event: <Device_Name> at
+  <Created_At> UTC (id <Id>)`, plus `Console.Beep()` from the interactive
+  alert sink (skipped in redirected mode — no one to hear it, and some
+  environments don't support it). A poll that throws calls the same sink
+  with a `[WATCH] Error checking for new events: ...` message instead of
+  killing the background loop — a transient API hiccup shouldn't require
+  restarting the watch.
+- **Testing the concurrency**: proving `NotifyExternal` doesn't corrupt an
+  in-progress line needs a `ReadLine` call that's genuinely paused
+  mid-keystroke on another thread, which the existing `FakeConsoleIO`
+  (queue-and-throw-when-empty) can't do. `BlockingFakeConsoleIO`
+  (`BlinkCameraCallUnitTests/IO/BlockingFakeConsoleIO.cs`) instead blocks
+  `ReadKey()` on a real queue and exposes `WaitForReadKeyCalls(count,
+  timeout)`, which blocks the test thread until the editor has processed
+  that many keys and is idle waiting for the next one — the safe,
+  deterministic window to call `NotifyExternal` without a sleep-based
+  guess.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per
@@ -616,6 +680,15 @@ or deliberately decide to still skip:
   duration of one keystroke.** A terminal resize mid-line may misplace the
   cursor until the next full prompt redraw — not solved here, and
   PowerShell itself isn't perfectly robust to this either.
+- **`WATCH` is polling, not push.** It calls the same `media/changed`
+  endpoint `VIDEOS` uses on a timer (default 20s) rather than receiving a
+  live push from Blink, so there's up to one poll interval of latency
+  before a real-world event shows up as a console alert. It also inherits
+  §7.5's caveat that the response shape is a best-effort reconstruction,
+  not confirmed live.
+- **Watch alerts aren't logged anywhere** — they only print to the console
+  (and beep) for as long as the process is running. `docs/ToDo.md`'s
+  "log them to a file" idea is still open.
 
 ## 11. If you had to rebuild this from scratch, in order
 

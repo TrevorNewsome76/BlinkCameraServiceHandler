@@ -9,5 +9,6 @@ Allow the application be minimized to system tray.
 Add alerts so it makes a popup come up.
 
 Check for notifications and display also log them to a file. If Blink camera a triggered open up instantly.
+- DONE (partial): `WATCH`/`UNWATCH` poll in the background and alert in the console (beep + message) on new doorbell/motion events, starting automatically on login. Still open: logging alerts to a file.
 
 Add a scheduler so whilst the program is running it can schedule tasks such as trigger camera images. Highlight any issues like battery warnings.
