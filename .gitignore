@@ -92,3 +92,7 @@ BlinkCameraCall/settings.json
 .superpowers/
 /BlinkCameraCall/bin
 /BlinkCameraCall/obj
+/BlinkCameraCallUnitTests/bin
+/BlinkCameraCallUnitTests/obj
+/BlinkCommon/bin
+/BlinkCommon/obj
