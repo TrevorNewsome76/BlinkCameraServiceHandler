@@ -132,27 +132,38 @@ ICommandStatusResponse? DisableDoorbell(this IAdapter adapter, IAuthAccount acco
 
 ### Business layer (`BlinkLibrary`)
 
-Three public overloads each for `Arm`/`Disarm`, mirroring the existing
-`(name, camera, doorbell)` shape `ListDeviceMedia`/`DownloadCurrentThumbnail`
-already use for device-scoped operations:
+Three public overloads each for `Arm`/`Disarm`. Hub-level mirrors the
+existing `ListDeviceMedia`-style pattern of taking an already-resolved
+object; device-level instead takes just the **name** and resolves it
+internally via the existing `ResolveCameraOrDoorbell(name)` — deliberately
+*not* the `(name, camera, doorbell)` shape `ListDeviceMedia` uses, because
+that shape's caller (`ShellSession.ResolveCurrentDevice`) only guards
+against two cameras or two doorbells sharing a name, not against a camera
+and a doorbell sharing one — `ResolveCameraOrDoorbell` is the one lookup in
+this codebase that already treats *that* as ambiguous too (same rule
+`Snap` relies on today), so device-level `Arm`/`Disarm` reuses it directly
+instead of trusting an already-resolved pair from the caller:
 
 ```csharp
-public string Arm();                                                                 // system-wide
-public string Arm(IHomeScreenNetwork network);                                        // one hub
-public string Arm(string deviceName, IHomeScreenCamera? camera, IHomeScreenDoorbells? doorbell); // one device
+public string Arm();                                  // system-wide
+public string Arm(IHomeScreenNetwork network);         // one hub
+public string Arm(string deviceName);                  // one device
 
 public string Disarm();
 public string Disarm(IHomeScreenNetwork network);
-public string Disarm(string deviceName, IHomeScreenCamera? camera, IHomeScreenDoorbells? doorbell);
+public string Disarm(string deviceName);
 ```
 
-**Device-level** (`Arm`/`Disarm(name, camera, doorbell)`) — a single
-enable/disable call, same guard/message shape `Snap` already uses:
+**Device-level** (`Arm`/`Disarm(deviceName)`) — a single enable/disable
+call, same guard/message shape `Snap` already uses:
 
 - Not logged in → `"Not currently logged into Blink service."`
-- `camera is null && doorbell is null` → `$"No single device named '{deviceName}' was found. Run MAP to see exact names."`
+- `_sessionDetails.Cameras is null && _sessionDetails.Doorbells is null` → `"Run MAP or GET first to load your devices."` (same guard `Snap` already has)
+- Resolve `deviceName` via the existing `ResolveCameraOrDoorbell(name)` (the
+  same private helper `Snap` already uses) → both null (not found, or
+  ambiguous) → `$"No single device named '{deviceName}' was found. Run MAP to see exact names."`
 - Calls `adapter.EnableCamera`/`DisableCamera` or `EnableDoorbell`/`DisableDoorbell`
-  depending on which of `camera`/`doorbell` is non-null (same
+  depending on which of the resolved camera/doorbell is non-null (same
   camera-vs-doorbell branching `Snap` already does).
 - `null` result (timed out) → `$"Blink did not finish arming '{deviceName}' in time."` (or `"disarming"`)
 - An outright-rejected request still throws `InvalidOperationException`
@@ -248,16 +259,10 @@ feature, not a general refactor of unrelated code.
 context resolution, exactly like `Trigger()`:
 
 ```csharp
-public string Arm()
-{
-    if (_currentDeviceName is not null)
-    {
-        var (camera, doorbell) = ResolveCurrentDevice();
-        return library.Arm(_currentDeviceName, camera, doorbell);
-    }
-
-    return _currentNetwork is not null ? library.Arm(_currentNetwork) : library.Arm();
-}
+public string Arm() =>
+    _currentDeviceName is not null ? library.Arm(_currentDeviceName) :
+    _currentNetwork is not null ? library.Arm(_currentNetwork) :
+    library.Arm();
 ```
 
 `Disarm()` is the same shape calling `library.Disarm(...)`. Neither needs
