@@ -177,6 +177,102 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmFailedNotLoggedIn()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var actualResult = new BlinkLibrary(mockAdapter).Arm("Pergoda");
+        actualResult.Should().BeEquivalentTo("Not currently logged into Blink service.");
+    }
+
+    [Fact]
+    public void Test_ArmFailedNoDevicesLoaded()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var actualResult = blinkLib.Arm("Pergoda");
+        actualResult.Should().BeEquivalentTo("Run MAP or GET first to load your devices.");
+    }
+
+    [Fact]
+    public void Test_ArmFailedDeviceNotFound()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var actualResult = blinkLib.Arm("Unknown Camera");
+        actualResult.Should().BeEquivalentTo("No single device named 'Unknown Camera' was found. Run MAP to see exact names.");
+    }
+
+    [Fact]
+    public void Test_ArmFailedCameraAndDoorbellShareName()
+    {
+        // Reuses the existing ambiguous-name fixture Test_SnapFailedCameraAndDoorbellShareName
+        // already relies on, proving device-level Arm treats a name matching both a camera
+        // and a doorbell as not-found, the same way Snap already does.
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "unothumbnail@email.com", "pPAssword" });
+        blinkLib.Map();
+        var actualResult = blinkLib.Arm("Shared Name Device");
+        actualResult.Should().BeEquivalentTo("No single device named 'Shared Name Device' was found. Run MAP to see exact names.");
+    }
+
+    [Fact]
+    public void Test_ArmSuccessful_Camera()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+        var callsBeforeArm = apiMethods.HomeScreenCallCount;
+
+        var actualResult = blinkLib.Arm("Pergoda", TimeSpan.Zero, 1);
+
+        actualResult.Should().BeEquivalentTo("Armed 'Pergoda'.");
+        apiMethods.HomeScreenCallCount.Should().Be(callsBeforeArm + 1);
+    }
+
+    [Fact]
+    public void Test_ArmSuccessful_Doorbell()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+
+        var actualResult = blinkLib.Arm("Front door bell", TimeSpan.Zero, 1);
+
+        actualResult.Should().BeEquivalentTo("Armed 'Front door bell'.");
+    }
+
+    [Fact]
+    public void Test_ArmFailed_Timeout()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+
+        var actualResult = blinkLib.Arm("Garage", TimeSpan.Zero, 1);
+
+        actualResult.Should().BeEquivalentTo("Blink did not finish arming 'Garage' in time.");
+    }
+
+    [Fact]
+    public void Test_DisarmFailedRejectedOutright()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+
+        Assert.Throws<InvalidOperationException>(() => blinkLib.Disarm("Garage", TimeSpan.Zero, 1));
+    }
+
+    [Fact]
     public void Test_DeviceFailedNotLoggedIn()
     {
         //assign

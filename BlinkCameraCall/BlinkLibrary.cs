@@ -153,6 +153,50 @@ public class BlinkLibrary(IAdapter adapter)
         return $"New image captured for '{name}'. Run IMAGE -n{name} to download it.";
     }
 
+    private void RefreshDeviceLists()
+    {
+        var response = adapter.GetHomeScreen(_sessionDetails.Account!);
+        _sessionDetails.Networks = response?.Networks;
+        _sessionDetails.SyncModules = response?.Sync_Modules;
+        _sessionDetails.Cameras = response?.Cameras;
+        _sessionDetails.Doorbells = response?.Doorbells;
+    }
+
+    public string Arm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        ArmOrDisarm(deviceName, arm: true, pollInterval, maxRetries);
+
+    public string Disarm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        ArmOrDisarm(deviceName, arm: false, pollInterval, maxRetries);
+
+    private string ArmOrDisarm(string deviceName, bool arm, TimeSpan? pollInterval, int maxRetries)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_sessionDetails.Cameras is null && _sessionDetails.Doorbells is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var (camera, doorbell) = ResolveCameraOrDoorbell(deviceName);
+
+        if (camera is null && doorbell is null)
+            return $"No single device named '{deviceName}' was found. Run MAP to see exact names.";
+
+        var result = camera is not null
+            ? (arm
+                ? adapter.EnableCamera(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries)
+                : adapter.DisableCamera(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries))
+            : (arm
+                ? adapter.EnableDoorbell(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries)
+                : adapter.DisableDoorbell(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries));
+
+        if (result is null)
+            return $"Blink did not finish {(arm ? "arming" : "disarming")} '{deviceName}' in time.";
+
+        RefreshDeviceLists();
+
+        return $"{(arm ? "Armed" : "Disarmed")} '{deviceName}'.";
+    }
+
     public string Device(string[] arguments)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))

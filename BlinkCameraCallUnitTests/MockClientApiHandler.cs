@@ -49,6 +49,18 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":500,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/camera/321380/thumbnail":
                 return "{\"id\":501,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/camera/321343/enable":
+                return "{\"id\":1010,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/camera/321343/disable":
+                return "{\"id\":1011,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/camera/321380/enable":
+                return "{\"id\":1012,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/camera/321380/disable":
+                return "{\"message\":\"system busy\"}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/doorbells/5009/enable":
+                return "{\"id\":1014,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/doorbells/5009/disable":
+                return "{\"id\":1015,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/1/camera/10/thumbnail":
                 return "{\"message\":\"system busy\"}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/999999/networks/1/sync_modules/500/local_storage/manifest/request":
@@ -125,6 +137,16 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":500,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/command/501":
                 return "{\"id\":501,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1010":
+                return "{\"id\":1010,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1011":
+                return "{\"id\":1011,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1012":
+                return "{\"id\":1012,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1014":
+                return "{\"id\":1014,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/263178/command/1015":
+                return "{\"id\":1015,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }

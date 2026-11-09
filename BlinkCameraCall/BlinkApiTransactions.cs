@@ -102,6 +102,18 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     public ICommandStatusResponse? SystemTriggerDoorbellSnapshot(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/thumbnail", networkId, account.Tier, pollInterval, maxRetries);
 
+    public ICommandStatusResponse? SystemEnableCamera(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/enable", networkId, account.Tier, pollInterval, maxRetries);
+
+    public ICommandStatusResponse? SystemDisableCamera(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/disable", networkId, account.Tier, pollInterval, maxRetries);
+
+    public ICommandStatusResponse? SystemEnableDoorbell(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/enable", networkId, account.Tier, pollInterval, maxRetries);
+
+    public ICommandStatusResponse? SystemDisableDoorbell(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/disable", networkId, account.Tier, pollInterval, maxRetries);
+
     public IMediaChangedResponse? SystemGetRecentMedia(IAuthAccount account, DateTime sinceUtc)
     {
         var since = sinceUtc.ToString("yyyy-MM-ddTHH:mm:ss+00:00");
