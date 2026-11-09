@@ -314,9 +314,11 @@ DISARM                            Disarms the current system/hub/device (cd to c
   at least one each of: immediate success, a command that never completes
   (timeout), and a POST that comes back with no usable id (outright
   rejection).
-- **`UnitTest_ApiTransactions`** additions — one test per new method per
-  outcome (success / timeout / rejection), mirroring the existing
-  `SystemTriggerCameraSnapshot`/`SystemTriggerDoorbellSnapshot` tests.
+- No isolated API-transaction-level tests — `SystemTriggerCameraSnapshot`/
+  `SystemTriggerDoorbellSnapshot` don't have any either; this codebase's
+  convention is to prove the API layer end-to-end through `BlinkLibrary` +
+  `MockAdapter` (see `DEVELOPER.md` §9), which the new methods get the same
+  way, below.
 - **`UnitTest_BlinkLibrary`** additions — device-level `Arm`/`Disarm` for a
   camera, for a doorbell, for an unresolvable name, and not-logged-in;
   hub-level `Arm`/`Disarm` using the existing multi-camera/multi-doorbell
@@ -327,7 +329,7 @@ DISARM                            Disarms the current system/hub/device (cd to c
   not-loaded-yet.
 - **`UnitTest_ShellSession`** additions — `Arm`/`Disarm` at root delegates to
   `library.Arm()`/`Disarm()`; inside a hub delegates with that network;
-  inside a device delegates with the resolved camera/doorbell — mirroring
+  inside a device delegates with the current device's name — mirroring
   the existing `Trigger` dispatch test, verified via the same `MockAdapter`
   fixture rather than a mock of `BlinkLibrary` itself (no mocking seam exists
   there, nor is one needed — these are thin delegation checks against real
