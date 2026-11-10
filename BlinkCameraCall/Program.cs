@@ -33,6 +33,7 @@ namespace BlinkCameraCall
             
             var blinkLibrary = new BlinkLibrary(new BlinkAdapter(settings));
             var shellLineEditor = new ShellLineEditor(new SystemConsoleIO());
+            var progressSpinner = new ProgressSpinner(new SystemConsoleIO());
             var shellSession = new ShellSession(blinkLibrary);
 
             Action<string> alertSink = (Console.IsInputRedirected || Console.IsOutputRedirected)
@@ -127,10 +128,10 @@ namespace BlinkCameraCall
                                 Console.WriteLine(shellSession.Trigger());
                                 break;
                             case "arm":
-                                Console.WriteLine(shellSession.Arm());
+                                Console.WriteLine(RunWithProgress(progressSpinner, cts => shellSession.Arm(onProgress: progressSpinner.WriteLine, cancellationToken: cts.Token), () => shellSession.Arm()));
                                 break;
                             case "disarm":
-                                Console.WriteLine(shellSession.Disarm());
+                                Console.WriteLine(RunWithProgress(progressSpinner, cts => shellSession.Disarm(onProgress: progressSpinner.WriteLine, cancellationToken: cts.Token), () => shellSession.Disarm()));
                                 break;
                             case "watch":
                                 Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink));
@@ -163,8 +164,8 @@ namespace BlinkCameraCall
                                 Console.WriteLine("CD <name>|..|\\                   Changes directory between hubs and devices.");
                                 Console.WriteLine("LS                                Lists hubs, devices, or a device's media, depending on where you are.");
                                 Console.WriteLine("TRIGGER                          Takes a fresh snapshot of the current device (cd into one first).");
-                                Console.WriteLine("ARM                               Arms the current system/hub/device (cd to choose the level).");
-                                Console.WriteLine("DISARM                            Disarms the current system/hub/device (cd to choose the level).");
+                                Console.WriteLine("ARM                               Arms the current system/hub/device (cd to choose the level). Press Esc to cancel.");
+                                Console.WriteLine("DISARM                            Disarms the current system/hub/device (cd to choose the level). Press Esc to cancel.");
                                 Console.WriteLine("WATCH -s<seconds>                Watches for new doorbell/motion events in the background (default 20s).");
                                 Console.WriteLine("UNWATCH                          Stops watching for new events.");
                                 Console.WriteLine("DOWNLOAD <name>                  Downloads a media item by the name LS showed (device directory only).");
@@ -200,6 +201,33 @@ namespace BlinkCameraCall
         {
             if (blinkLibrary.IsLoggedIn)
                 Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink));
+        }
+
+        private static string RunWithProgress(ProgressSpinner progressSpinner, Func<CancellationTokenSource, string> runCancellable, Func<string> runPlain)
+        {
+            if (Console.IsInputRedirected || Console.IsOutputRedirected)
+                return runPlain();
+
+            var cts = new CancellationTokenSource();
+            progressSpinner.Start("Sending instructions, please wait...");
+
+            var task = Task.Run(() => runCancellable(cts));
+
+            while (!task.IsCompleted)
+            {
+                if (Console.KeyAvailable)
+                {
+                    var key = Console.ReadKey(intercept: true);
+                    if (key.Key == ConsoleKey.Escape || (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
+                        cts.Cancel();
+                }
+
+                progressSpinner.Tick();
+                Thread.Sleep(120);
+            }
+
+            progressSpinner.Stop();
+            return task.Result;
         }
 
         private static void AttemptAutoLogin(BlinkLibrary blinkLibrary, IBlinkSettings settings, Action<string> alertSink)
