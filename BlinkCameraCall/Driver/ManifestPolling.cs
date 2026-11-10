@@ -10,18 +10,22 @@ public static class ManifestPolling
         IApiMethods api,
         string manifestStatusUrl,
         TimeSpan? pollInterval = null,
-        int maxRetries = 120)
+        int maxRetries = 120,
+        CancellationToken cancellationToken = default)
     {
         var interval = pollInterval ?? TimeSpan.FromSeconds(1);
 
         for (var attempt = 0; attempt < maxRetries; attempt++)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             var result = (api.Get(manifestStatusUrl) ?? string.Empty).Deserialize<ILocalStorageManifestResult>();
 
             if (result.Clips is not null)
                 return result;
 
-            Thread.Sleep(interval);
+            if (cancellationToken.WaitHandle.WaitOne(interval))
+                cancellationToken.ThrowIfCancellationRequested();
         }
 
         return null;

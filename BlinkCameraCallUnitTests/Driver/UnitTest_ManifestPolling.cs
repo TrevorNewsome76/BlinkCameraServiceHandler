@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BlinkCameraCall.Driver;
 using BlinkCommon.Interfaces;
 using FluentAssertions;
@@ -24,6 +25,8 @@ public class UnitTest_ManifestPolling
             _callCount++;
             return responses[index];
         }
+
+        public int CallCount => _callCount;
     }
 
     private const string NotReady = "{\"id\":7}";
@@ -58,5 +61,52 @@ public class UnitTest_ManifestPolling
         var result = ManifestPolling.WaitForManifestReady(api, "http://example/manifest/request/7", TimeSpan.Zero, 3);
 
         result.Should().BeNull();
+    }
+
+    [Fact]
+    public void Test_WaitForManifestReady_AlreadyCancelled_ThrowsBeforeFirstGet()
+    {
+        var api = new FakeApiMethods(NotReady);
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        Action act = () => ManifestPolling.WaitForManifestReady(api, "http://example/manifest/request/7", TimeSpan.Zero, 3, cts.Token);
+
+        act.Should().Throw<OperationCanceledException>();
+        api.CallCount.Should().Be(0);
+    }
+
+    [Fact]
+    public void Test_WaitForManifestReady_CancelledDuringWait_StopsBeforeNextAttempt()
+    {
+        // Proves cancellation requested *during* the poll wait is honored immediately, not
+        // only once the wait fully elapses. Uses CancelAfter (an independent timer) rather than
+        // cancelling synchronously from inside a Get call, so the signal genuinely arrives
+        // mid-wait regardless of whether the loop's own thread is currently blocked in a
+        // non-interruptible Thread.Sleep (the old, buggy behavior) or waiting on the token's
+        // WaitHandle (the fix). A real, long pollInterval (5s) combined with asserting elapsed
+        // time is well under that makes the old uninterruptible behavior obviously fail this test.
+        var api = new FakeApiMethods(NotReady);
+        var cts = new CancellationTokenSource();
+        cts.CancelAfter(TimeSpan.FromMilliseconds(100));
+
+        var stopwatch = Stopwatch.StartNew();
+        Action act = () => ManifestPolling.WaitForManifestReady(api, "http://example/manifest/request/7", TimeSpan.FromSeconds(5), 120, cts.Token);
+        act.Should().Throw<OperationCanceledException>();
+        stopwatch.Stop();
+
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2),
+            "cancellation during the wait should interrupt it immediately, not block for the full 5s interval");
+        api.CallCount.Should().BeLessThan(120);
+    }
+
+    [Fact]
+    public void Test_WaitForManifestReady_NotCancelled_StillReturnsResultOnceCompleteFlagAppears()
+    {
+        var api = new FakeApiMethods(NotReady, Ready);
+
+        var result = ManifestPolling.WaitForManifestReady(api, "http://example/manifest/request/7", TimeSpan.Zero, 5);
+
+        result!.Clips.Should().ContainSingle();
     }
 }

@@ -140,13 +140,13 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         return result;
     }
 
-    public ILocalStorageManifestResult? SystemGetLocalStorageManifest(IAuthAccount account, long networkId, long syncModuleId, long manifestRequestId, TimeSpan? pollInterval = null, int maxRetries = 120)
+    public ILocalStorageManifestResult? SystemGetLocalStorageManifest(IAuthAccount account, long networkId, long syncModuleId, long manifestRequestId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default)
     {
         if (ApiDriver is null)
             return null;
 
         var url = $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/sync_modules/{syncModuleId}/local_storage/manifest/request/{manifestRequestId}";
-        return ManifestPolling.WaitForManifestReady(ApiDriver, url, pollInterval, maxRetries);
+        return ManifestPolling.WaitForManifestReady(ApiDriver, url, pollInterval, maxRetries, cancellationToken);
     }
 
     public string BuildLocalStorageClipUrl(IAuthAccount account, long networkId, long syncModuleId, long manifestId, long clipId) =>
