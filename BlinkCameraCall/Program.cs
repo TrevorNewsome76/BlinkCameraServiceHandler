@@ -208,26 +208,34 @@ namespace BlinkCameraCall
             if (Console.IsInputRedirected || Console.IsOutputRedirected)
                 return runPlain();
 
-            var cts = new CancellationTokenSource();
+            using var cts = new CancellationTokenSource();
             progressSpinner.Start("Sending instructions, please wait...");
 
-            var task = Task.Run(() => runCancellable(cts));
-
-            while (!task.IsCompleted)
+            Console.TreatControlCAsInput = true;
+            try
             {
-                if (Console.KeyAvailable)
+                var task = Task.Run(() => runCancellable(cts));
+
+                while (!task.IsCompleted)
                 {
-                    var key = Console.ReadKey(intercept: true);
-                    if (key.Key == ConsoleKey.Escape || (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
-                        cts.Cancel();
+                    if (Console.KeyAvailable)
+                    {
+                        var key = Console.ReadKey(intercept: true);
+                        if (key.Key == ConsoleKey.Escape || (key.Key == ConsoleKey.C && key.Modifiers.HasFlag(ConsoleModifiers.Control)))
+                            cts.Cancel();
+                    }
+
+                    progressSpinner.Tick();
+                    Thread.Sleep(120);
                 }
 
-                progressSpinner.Tick();
-                Thread.Sleep(120);
+                progressSpinner.Stop();
+                return task.Result;
             }
-
-            progressSpinner.Stop();
-            return task.Result;
+            finally
+            {
+                Console.TreatControlCAsInput = false;
+            }
         }
 
         private static void AttemptAutoLogin(BlinkLibrary blinkLibrary, IBlinkSettings settings, Action<string> alertSink)
