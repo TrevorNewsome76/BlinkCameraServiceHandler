@@ -655,6 +655,128 @@ already naturally `cd`-scoped.
   to add at this layer at all; `BlinkLibrary` already produces every "not
   logged in"/"not loaded" message on its own.
 
+### 7.10 Reliability and live feedback for ARM/DISARM
+
+§7.9 shipped with a real bug, found only once this app hit a live account:
+every `ARM`/`DISARM`-family command (and, as it turned out, `SNAP`/
+`TRIGGER`/local-storage prepare too, since they all share `TriggerSnapshot`)
+reported `Blink rejected the request` even when Blink had genuinely
+accepted it. This subsection documents the fix, the retry behaviour added
+alongside it, and the cancellation/streaming support layered on top.
+
+- **Root cause.** Blink's real command-acceptance response is a large,
+  rich JSON object whose `id` field is itself large enough to exceed
+  `Int32.MaxValue`. Every mock fixture used during development of §7.9
+  had a much smaller, hand-built id, so this never surfaced until a real
+  account's response hit `Shadow.Quack`'s `JsonProxy`-based
+  `Deserialize<T>()` (`JsonSerializerExtension.Deserialize<T>`,
+  §3.1) and threw. `Deserialize<T>` catches *any* exception from that
+  path and silently returns an all-default object (`Id = 0`,
+  `Complete = false`, ...) instead of propagating or logging it.
+  `TriggerSnapshot`'s own `triggerResult.Id != 0` check then read that
+  all-default object exactly the same way it reads a genuine Blink
+  rejection — there was no way to tell the two apart downstream of the
+  swallowed exception.
+- **Why the fix bypasses `JsonProxy` entirely, rather than patching or
+  fully diagnosing it.** `JsonProxy` is third-party (`Shadow.Quack`) code
+  outside this repo's control, and nothing here actually needs its full
+  dynamic-duck-typing machinery for this one shape: `ICommandStatusResponse`
+  is four known, flat fields (`Id`, `Network_Id`, `Complete`,
+  `Status_Code`). `CommandStatusJsonExtension.ParseCommandStatus`
+  (`BlinkCommon/Extensions/CommandStatusJsonExtension.cs`) reads exactly
+  those four fields with plain `System.Text.Json`, defaulting safely
+  (`0`/`false`) on anything missing, oversized, or malformed, and only
+  calls `Duck.Implement<ICommandStatusResponse>` as the final step against
+  a plain anonymous object — the same "construction" path §3.1 already
+  uses elsewhere, never the "parse real JSON through `JsonProxy`" path
+  that broke. `TriggerSnapshot`, `CommandPolling.WaitForCommandComplete`,
+  and `SystemPrepareLocalStorageClip` all switched to it in place of the
+  old `.Deserialize<ICommandStatusResponse>()` call.
+- **The busy-retry's exact shape.** A rejection is retried only when
+  Blink's raw response body actually contains `"code":307` — checked with
+  a second small, dedicated parse (`ApiTransactions.IsBusyRejection`,
+  plain `System.Text.Json.JsonDocument`, defaulting to `false` on anything
+  that doesn't parse), never by matching on message text, since message
+  wording is far more likely to change than a numeric status code. On a
+  307, `TriggerSnapshot` retries up to **3 attempts in total** (the
+  original attempt plus 2 retries), sleeping between them for
+  `pollInterval` (or 1 second if `null`) and then twice that — roughly 1s,
+  then 2s. Any other rejection (or the 3rd busy rejection in a row) throws
+  `InvalidOperationException` immediately, exactly as before. Reusing
+  `pollInterval` as the backoff's base unit, rather than adding a separate
+  parameter, is deliberate: it's what already lets a test pass
+  `TimeSpan.Zero` for instant completion-polling, so the same value gives
+  instant busy-retries too, with no new test-only parameter to thread
+  through every call site.
+- **Why `SystemRequestLocalStorageManifest`/`ManifestPolling` were
+  deliberately left untouched.** Both still call the old, generic
+  `.Deserialize<T>()` (against `IManifestRequestResponse`/
+  `ILocalStorageManifestResult` — different interfaces, different response
+  shapes, from a different pair of endpoints) rather than a bespoke parser
+  like `ParseCommandStatus`. There's no evidence either response shares
+  the oversized-id shape that broke `ICommandStatusResponse` — this fix
+  addresses the bug that was actually found and reproduced, not every
+  place `Deserialize<T>` is theoretically capable of failing the same way.
+  If a live account ever shows the same symptom here, the fix is the same
+  playbook: write a dedicated `System.Text.Json`-based parser for that one
+  interface.
+- **Cancellation and streaming design.** `CancellationToken` and
+  `onProgress` (`Action<string>?`) were both added as **trailing optional
+  parameters**, so every existing call site (including every pre-existing
+  test) keeps compiling and behaving identically with cancellation simply
+  never requested and progress never streamed. `CancellationToken` reaches
+  all the way down to the six `ApiTransactions` adapter methods (§7.9) —
+  there's no per-item progress to stream at that layer, so only the token
+  trails there. `onProgress` stops one layer up, at `BlinkLibrary`'s
+  hub/system-level `Arm`/`Disarm` overloads and `ShellSession.Arm`/`Disarm`
+  (which just forwards whatever it's given to the matching `BlinkLibrary`
+  overload) — that's where each item's own line is actually assembled, so
+  it's the only layer with a line to stream. `ArmOrDisarmNetwork`'s private
+  return type is a
+  `(List<string> Lines, int Succeeded, int Total, bool Cancelled)` tuple;
+  the `Cancelled` field is what each caller (hub-level `Arm`/`Disarm`,
+  and the system-level loop over every hub) reads to decide whether to
+  print a "cancelled (x/y attempted)" closing line instead of the normal
+  success-count one, and, at system level, whether to stop before the
+  next hub instead of continuing to it. `OperationCanceledException`
+  needs its **own** `catch` arm, ahead of `ArmOrDisarmNetwork`'s
+  pre-existing broad `catch (Exception ex)` (§7.9) — if cancellation fell
+  through to that generic arm instead, it would be `Emit`ted as an
+  ordinary per-item failure line and the loop would carry on to the next
+  camera or doorbell in that same network exactly as if nothing had been
+  cancelled at all — and, one layer up, a `Cancelled` that never turns
+  `true` also means the system-level loop never stops before the next hub
+  either. The specific arm instead returns immediately with
+  `Cancelled = true` and
+  **no** line for the item it caught the cancellation on. The cancellation
+  token is also checked before every busy-retry sleep inside
+  `TriggerSnapshot` itself, not just before the initial POST — a cancel
+  requested mid-backoff is honoured as soon as that sleep would otherwise
+  start, rather than waiting out the full ~1s/~2s delay first. Whatever
+  HTTP call is already in flight when a cancel is requested is still left
+  to complete normally (the token isn't passed into `IApiMethods.Post`
+  itself), so a cancel never aborts a request Blink is actively
+  processing — it only stops the *next* attempt or the *next* item from
+  starting.
+- **`ProgressSpinner`'s role.** `BlinkCameraCall/IO/ProgressSpinner.cs`
+  wraps an `IConsoleIO` (§7.7) to animate a single spinning character
+  after a fixed message (`Start`), advance it one frame (`Tick`), print a
+  line without disturbing the animation by erasing the current frame
+  first and redrawing it after (`WriteLine` — this is what lets each
+  hub/system-level item's line interleave live with the spinner instead of
+  only appearing once everything finishes), and erase it for good
+  (`Stop`). It has **one explicitly-accepted limitation**: it does not
+  arbitrate with `WATCH`'s alert sink (§7.8) at all. If a background
+  `WATCH` alert fires while a spinner is active, the two can interleave
+  on-screen exactly the same way an alert could already interleave with
+  `ShellLineEditor`'s in-progress prompt before `NotifyExternal` was added
+  to fix that specific case (§7.8) — nothing equivalent exists for the
+  spinner. This was a deliberate scope decision, not an oversight: the
+  spinner only runs for the short, bounded duration of one `ARM`/`DISARM`,
+  and solving it would mean giving the spinner the same kind of
+  lock-and-redraw coordination `ShellLineEditor` has, for a much smaller
+  window of exposure.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per
@@ -766,6 +888,12 @@ or deliberately decide to still skip:
 - **Watch alerts aren't logged anywhere** — they only print to the console
   (and beep) for as long as the process is running. `docs/ToDo.md`'s
   "log them to a file" idea is still open.
+- **`ProgressSpinner` (§7.10) doesn't arbitrate with `WATCH`'s alert
+  sink** — a background alert firing while an `ARM`/`DISARM` spinner is
+  active can interleave with it on-screen, the same class of problem
+  `NotifyExternal` (§7.8) solves for the line editor's prompt but nothing
+  here solves for the spinner. Accepted deliberately given how short-lived
+  the spinner is, not fixed as an oversight.
 
 ## 11. If you had to rebuild this from scratch, in order
 

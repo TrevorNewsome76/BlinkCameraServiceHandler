@@ -286,6 +286,30 @@ rejected, timed out) — it reports every item's own outcome, then a closing
 success count, instead of stopping partway through or hiding a partial
 failure.
 
+If Blink answers that it's genuinely too busy to accept a command right
+now, that one item is retried automatically — up to 3 attempts in total,
+waiting about 1 second and then about 2 seconds between them — before it's
+given up on and reported as failed. This only applies to Blink's own
+"busy" signal; an outright rejection or a timeout is reported immediately,
+with no retry.
+
+While an `ARM`/`DISARM` is running, the shell shows a spinner —
+`Sending instructions, please wait...` — for as long as it takes, and (at
+hub/system level) streams each item's own line in as soon as it completes,
+rather than going silent until the whole thing finishes. Press **Esc** or
+**Ctrl+C** at any point to cancel: whatever's currently in flight is left
+to finish rather than aborted mid-request, nothing further is attempted —
+no more devices, no more hubs — and a summary of how far it got prints
+immediately:
+
+```
+BC> arm
+Sending instructions, please wait...
+Hub 'Home Front': armed.
+  Camera 'Pergoda': armed.
+Arming hub 'Home Front' cancelled (2/4 attempted).
+```
+
 System-wide, from the root:
 
 ```
@@ -327,6 +351,9 @@ Disarmed 'Pergoda'.
 | `Run MAP or GET first to load your devices.` | You're logged in, but haven't fetched your device list yet this session. |
 | `No single device named '<name>' was found. Run MAP to see exact names.` | Device-level only — the device no longer resolves to exactly one camera/doorbell. |
 | `Blink did not finish arming '<name>' in time.` (or `disarming`) | Device-level: the whole command failed this way. At hub/system level, this exact wording shows up as just that one item's own line instead — the rest of the operation still completes and gets reported. |
+| `Arming '<name>' cancelled.` (or `Disarming`) | Device-level: you pressed Esc/Ctrl+C before it finished. |
+| `Arming hub '<name>' cancelled (<x>/<y> attempted).` (or `Disarming`) | Hub-level, or one hub's line within a cancelled system-wide run: `<x>` of `<y>` items in that hub were attempted before the cancel took effect. |
+| `Arming the system cancelled (<x>/<y> attempted across <n> of <total> hubs).` (or `Disarming`) | System-wide: how far it got, in total, before the cancel took effect. |
 
 Device-level `ARM`/`DISARM` only ever changes that one camera/doorbell's own
 enabled state — it never reaches up and changes its hub's own armed state,
