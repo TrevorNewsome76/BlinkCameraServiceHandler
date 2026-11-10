@@ -180,13 +180,13 @@ public class BlinkLibrary(IAdapter adapter)
         _sessionDetails.Doorbells = response?.Doorbells;
     }
 
-    public string Arm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120, long? networkId = null) =>
-        ArmOrDisarm(deviceName, arm: true, pollInterval, maxRetries, networkId);
+    public string Arm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120, long? networkId = null, CancellationToken cancellationToken = default) =>
+        ArmOrDisarm(deviceName, arm: true, pollInterval, maxRetries, networkId, cancellationToken);
 
-    public string Disarm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120, long? networkId = null) =>
-        ArmOrDisarm(deviceName, arm: false, pollInterval, maxRetries, networkId);
+    public string Disarm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120, long? networkId = null, CancellationToken cancellationToken = default) =>
+        ArmOrDisarm(deviceName, arm: false, pollInterval, maxRetries, networkId, cancellationToken);
 
-    private string ArmOrDisarm(string deviceName, bool arm, TimeSpan? pollInterval, int maxRetries, long? networkId = null)
+    private string ArmOrDisarm(string deviceName, bool arm, TimeSpan? pollInterval, int maxRetries, long? networkId = null, CancellationToken cancellationToken = default)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
             return "Not currently logged into Blink service.";
@@ -199,13 +199,21 @@ public class BlinkLibrary(IAdapter adapter)
         if (camera is null && doorbell is null)
             return $"No single device named '{deviceName}' was found. Run MAP to see exact names.";
 
-        var result = camera is not null
-            ? (arm
-                ? adapter.EnableCamera(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries)
-                : adapter.DisableCamera(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries))
-            : (arm
-                ? adapter.EnableDoorbell(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries)
-                : adapter.DisableDoorbell(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries));
+        ICommandStatusResponse? result;
+        try
+        {
+            result = camera is not null
+                ? (arm
+                    ? adapter.EnableCamera(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries, cancellationToken)
+                    : adapter.DisableCamera(_sessionDetails.Account!, camera.Network_Id, camera.id, pollInterval, maxRetries, cancellationToken))
+                : (arm
+                    ? adapter.EnableDoorbell(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries, cancellationToken)
+                    : adapter.DisableDoorbell(_sessionDetails.Account!, doorbell!.Network_Id, doorbell.Id, pollInterval, maxRetries, cancellationToken));
+        }
+        catch (OperationCanceledException)
+        {
+            return $"{(arm ? "Arming" : "Disarming")} '{deviceName}' cancelled.";
+        }
 
         if (result is null)
             return $"Blink did not finish {(arm ? "arming" : "disarming")} '{deviceName}' in time.";
@@ -224,13 +232,17 @@ public class BlinkLibrary(IAdapter adapter)
         return resultText;
     }
 
-    public string Arm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120)
+    public string Arm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120, Action<string>? onProgress = null, CancellationToken cancellationToken = default)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
             return "Not currently logged into Blink service.";
 
-        var (lines, succeeded, total) = ArmOrDisarmNetwork(network, arm: true, pollInterval, maxRetries);
-        lines.Add($"Armed hub '{network.Name}' ({succeeded}/{total} succeeded).");
+        var (lines, succeeded, total, cancelled) = ArmOrDisarmNetwork(network, arm: true, pollInterval, maxRetries, onProgress, cancellationToken);
+        var closingLine = cancelled
+            ? $"Arming hub '{network.Name}' cancelled ({succeeded}/{total} attempted)."
+            : $"Armed hub '{network.Name}' ({succeeded}/{total} succeeded).";
+        lines.Add(closingLine);
+        onProgress?.Invoke(closingLine);
 
         try
         {
@@ -244,13 +256,17 @@ public class BlinkLibrary(IAdapter adapter)
         return string.Join(Environment.NewLine, lines);
     }
 
-    public string Disarm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120)
+    public string Disarm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120, Action<string>? onProgress = null, CancellationToken cancellationToken = default)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
             return "Not currently logged into Blink service.";
 
-        var (lines, succeeded, total) = ArmOrDisarmNetwork(network, arm: false, pollInterval, maxRetries);
-        lines.Add($"Disarmed hub '{network.Name}' ({succeeded}/{total} succeeded).");
+        var (lines, succeeded, total, cancelled) = ArmOrDisarmNetwork(network, arm: false, pollInterval, maxRetries, onProgress, cancellationToken);
+        var closingLine = cancelled
+            ? $"Disarming hub '{network.Name}' cancelled ({succeeded}/{total} attempted)."
+            : $"Disarmed hub '{network.Name}' ({succeeded}/{total} succeeded).";
+        lines.Add(closingLine);
+        onProgress?.Invoke(closingLine);
 
         try
         {
@@ -264,13 +280,13 @@ public class BlinkLibrary(IAdapter adapter)
         return string.Join(Environment.NewLine, lines);
     }
 
-    public string Arm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        ArmOrDisarmSystem(arm: true, pollInterval, maxRetries);
+    public string Arm(TimeSpan? pollInterval = null, int maxRetries = 120, Action<string>? onProgress = null, CancellationToken cancellationToken = default) =>
+        ArmOrDisarmSystem(arm: true, pollInterval, maxRetries, onProgress, cancellationToken);
 
-    public string Disarm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        ArmOrDisarmSystem(arm: false, pollInterval, maxRetries);
+    public string Disarm(TimeSpan? pollInterval = null, int maxRetries = 120, Action<string>? onProgress = null, CancellationToken cancellationToken = default) =>
+        ArmOrDisarmSystem(arm: false, pollInterval, maxRetries, onProgress, cancellationToken);
 
-    private string ArmOrDisarmSystem(bool arm, TimeSpan? pollInterval, int maxRetries)
+    private string ArmOrDisarmSystem(bool arm, TimeSpan? pollInterval, int maxRetries, Action<string>? onProgress, CancellationToken cancellationToken)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
             return "Not currently logged into Blink service.";
@@ -286,17 +302,35 @@ public class BlinkLibrary(IAdapter adapter)
         var lines = new List<string>();
         var grandSucceeded = 0;
         var grandTotal = 0;
+        var networksReached = 0;
+        var systemCancelled = false;
 
         foreach (var network in _sessionDetails.Networks)
         {
-            var (networkLines, succeeded, total) = ArmOrDisarmNetwork(network, arm, pollInterval, maxRetries);
+            var (networkLines, succeeded, total, networkCancelled) = ArmOrDisarmNetwork(network, arm, pollInterval, maxRetries, onProgress, cancellationToken);
             lines.AddRange(networkLines);
-            lines.Add($"{done} hub '{network.Name}' ({succeeded}/{total} succeeded).");
+            networksReached++;
             grandSucceeded += succeeded;
             grandTotal += total;
+
+            var hubClosingLine = networkCancelled
+                ? $"{(arm ? "Arming" : "Disarming")} hub '{network.Name}' cancelled ({succeeded}/{total} attempted)."
+                : $"{done} hub '{network.Name}' ({succeeded}/{total} succeeded).";
+            lines.Add(hubClosingLine);
+            onProgress?.Invoke(hubClosingLine);
+
+            if (networkCancelled)
+            {
+                systemCancelled = true;
+                break;
+            }
         }
 
-        lines.Add($"{done} the system ({grandSucceeded}/{grandTotal} succeeded across {_sessionDetails.Networks.Count} hubs).");
+        var finalLine = systemCancelled
+            ? $"{(arm ? "Arming" : "Disarming")} the system cancelled ({grandSucceeded}/{grandTotal} attempted across {networksReached} of {_sessionDetails.Networks.Count} hubs)."
+            : $"{done} the system ({grandSucceeded}/{grandTotal} succeeded across {_sessionDetails.Networks.Count} hubs).";
+        lines.Add(finalLine);
+        onProgress?.Invoke(finalLine);
 
         try
         {
@@ -310,88 +344,111 @@ public class BlinkLibrary(IAdapter adapter)
         return string.Join(Environment.NewLine, lines);
     }
 
-    private (List<string> Lines, int Succeeded, int Total) ArmOrDisarmNetwork(IHomeScreenNetwork network, bool arm, TimeSpan? pollInterval, int maxRetries)
+    private (List<string> Lines, int Succeeded, int Total, bool Cancelled) ArmOrDisarmNetwork(IHomeScreenNetwork network, bool arm, TimeSpan? pollInterval, int maxRetries, Action<string>? onProgress, CancellationToken cancellationToken)
     {
         var lines = new List<string>();
+        void Emit(string line) { lines.Add(line); onProgress?.Invoke(line); }
+
         var succeeded = 0;
         var total = 0;
         var account = _sessionDetails.Account!;
         var verb = arm ? "arming" : "disarming";
         var done = arm ? "armed" : "disarmed";
 
+        if (cancellationToken.IsCancellationRequested)
+            return (lines, succeeded, total, true);
+
         total++;
         try
         {
             var networkResult = arm
-                ? adapter.ArmNetwork(account, network.Id, pollInterval, maxRetries)
-                : adapter.DisarmNetwork(account, network.Id, pollInterval, maxRetries);
+                ? adapter.ArmNetwork(account, network.Id, pollInterval, maxRetries, cancellationToken)
+                : adapter.DisarmNetwork(account, network.Id, pollInterval, maxRetries, cancellationToken);
 
             if (networkResult is not null)
             {
-                lines.Add($"Hub '{network.Name}': {done}.");
+                Emit($"Hub '{network.Name}': {done}.");
                 succeeded++;
             }
             else
             {
-                lines.Add($"Hub '{network.Name}': Blink did not finish {verb} '{network.Name}' in time.");
+                Emit($"Hub '{network.Name}': Blink did not finish {verb} '{network.Name}' in time.");
             }
+        }
+        catch (OperationCanceledException)
+        {
+            return (lines, succeeded, total, true);
         }
         catch (Exception ex)
         {
-            lines.Add($"Hub '{network.Name}': {ex.Message}");
+            Emit($"Hub '{network.Name}': {ex.Message}");
         }
 
         foreach (var camera in (_sessionDetails.Cameras ?? new List<IHomeScreenCamera>()).Where(c => c.Network_Id == network.Id))
         {
+            if (cancellationToken.IsCancellationRequested)
+                return (lines, succeeded, total, true);
+
             total++;
             try
             {
                 var result = arm
-                    ? adapter.EnableCamera(account, camera.Network_Id, camera.id, pollInterval, maxRetries)
-                    : adapter.DisableCamera(account, camera.Network_Id, camera.id, pollInterval, maxRetries);
+                    ? adapter.EnableCamera(account, camera.Network_Id, camera.id, pollInterval, maxRetries, cancellationToken)
+                    : adapter.DisableCamera(account, camera.Network_Id, camera.id, pollInterval, maxRetries, cancellationToken);
 
                 if (result is not null)
                 {
-                    lines.Add($"  Camera '{camera.Name}': {done}.");
+                    Emit($"  Camera '{camera.Name}': {done}.");
                     succeeded++;
                 }
                 else
                 {
-                    lines.Add($"  Camera '{camera.Name}': Blink did not finish {verb} '{camera.Name}' in time.");
+                    Emit($"  Camera '{camera.Name}': Blink did not finish {verb} '{camera.Name}' in time.");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                return (lines, succeeded, total, true);
             }
             catch (Exception ex)
             {
-                lines.Add($"  Camera '{camera.Name}': {ex.Message}");
+                Emit($"  Camera '{camera.Name}': {ex.Message}");
             }
         }
 
         foreach (var doorbell in (_sessionDetails.Doorbells ?? new List<IHomeScreenDoorbells>()).Where(d => d.Network_Id == network.Id))
         {
+            if (cancellationToken.IsCancellationRequested)
+                return (lines, succeeded, total, true);
+
             total++;
             try
             {
                 var result = arm
-                    ? adapter.EnableDoorbell(account, doorbell.Network_Id, doorbell.Id, pollInterval, maxRetries)
-                    : adapter.DisableDoorbell(account, doorbell.Network_Id, doorbell.Id, pollInterval, maxRetries);
+                    ? adapter.EnableDoorbell(account, doorbell.Network_Id, doorbell.Id, pollInterval, maxRetries, cancellationToken)
+                    : adapter.DisableDoorbell(account, doorbell.Network_Id, doorbell.Id, pollInterval, maxRetries, cancellationToken);
 
                 if (result is not null)
                 {
-                    lines.Add($"  Doorbell '{doorbell.Name}': {done}.");
+                    Emit($"  Doorbell '{doorbell.Name}': {done}.");
                     succeeded++;
                 }
                 else
                 {
-                    lines.Add($"  Doorbell '{doorbell.Name}': Blink did not finish {verb} '{doorbell.Name}' in time.");
+                    Emit($"  Doorbell '{doorbell.Name}': Blink did not finish {verb} '{doorbell.Name}' in time.");
                 }
+            }
+            catch (OperationCanceledException)
+            {
+                return (lines, succeeded, total, true);
             }
             catch (Exception ex)
             {
-                lines.Add($"  Doorbell '{doorbell.Name}': {ex.Message}");
+                Emit($"  Doorbell '{doorbell.Name}': {ex.Message}");
             }
         }
 
-        return (lines, succeeded, total);
+        return (lines, succeeded, total, false);
     }
 
     public string Device(string[] arguments)

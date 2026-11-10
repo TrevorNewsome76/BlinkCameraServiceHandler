@@ -701,6 +701,38 @@ public class UnitTest_ShellSession
     }
 
     [Fact]
+    public void Test_Arm_InHub_StreamsViaOnProgress()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Back");
+        var streamed = new List<string>();
+
+        shellSession.Arm(TimeSpan.Zero, 1, onProgress: streamed.Add);
+
+        streamed.Should().NotBeEmpty();
+    }
+
+    [Fact]
+    public void Test_Arm_AtRoot_CancelledBeforeCall_ReportsCancelled()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var actualResult = shellSession.Arm(TimeSpan.Zero, 1, cancellationToken: cts.Token);
+
+        actualResult.Should().Contain("cancelled");
+    }
+
+    [Fact]
     public void Test_Prompt_ResetsAfterLogout()
     {
         //assign

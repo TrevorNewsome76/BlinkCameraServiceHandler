@@ -121,6 +121,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":700008,\"network_id\":700000,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/700000/camera/700007/enable":
                 return "{\"message\":\"System is busy, please wait\",\"error\":null,\"code\":307}";
+            case "https://rest-007.immedia-semi.com/network/700000/camera/700009/enable":
+                return "{\"id\":700010,\"network_id\":700000,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/700000/camera/700005/enable":
                 // Id is intentionally > Int32.MaxValue (same magnitude as the real logged id,
                 // 3796763377): that's the specific trigger for Shadow.Quack's JsonProxy failure
@@ -210,6 +212,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":700002,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/700000/command/700008":
                 return "{\"id\":700008,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/700000/command/700010":
+                return "{\"id\":700010,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }

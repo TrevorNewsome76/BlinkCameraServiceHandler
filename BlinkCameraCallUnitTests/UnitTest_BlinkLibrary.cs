@@ -587,6 +587,98 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmDeviceFailed_CancelledBeforeCall_ReportsCancelled()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var actualResult = blinkLib.Arm("Pergoda", TimeSpan.Zero, 1, cancellationToken: cts.Token);
+
+        actualResult.Should().Be("Arming 'Pergoda' cancelled.");
+    }
+
+    [Fact]
+    public void Test_ArmHub_CancelledBeforeCall_ReportsCancelledWithZeroAttempted()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeFront = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Front");
+        var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        var actualResult = blinkLib.Arm(homeFront, TimeSpan.Zero, 1, cancellationToken: cts.Token);
+
+        actualResult.Should().Be("Arming hub 'Home Front' cancelled (0/0 attempted).");
+    }
+
+    [Fact]
+    public void Test_ArmHub_StreamsEachLineViaOnProgress()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeBack = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Back");
+        var streamed = new List<string>();
+
+        var actualResult = blinkLib.Arm(homeBack, TimeSpan.Zero, 1, onProgress: streamed.Add);
+
+        streamed.Should().Equal(
+            "Hub 'Home Back': armed.",
+            "Armed hub 'Home Back' (1/1 succeeded)."
+        );
+        actualResult.Should().Be(string.Join(Environment.NewLine, streamed));
+    }
+
+    [Fact]
+    public void Test_ArmSystem_CancelledDuringFirstHub_StopsBeforeSecondHub()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var cts = new CancellationTokenSource();
+        var streamed = new List<string>();
+        // Cancel as soon as the first line streams in, before "Home Back" is ever reached.
+        void OnProgress(string line) { streamed.Add(line); cts.Cancel(); }
+
+        var actualResult = blinkLib.Arm(TimeSpan.Zero, 1, onProgress: OnProgress, cancellationToken: cts.Token);
+
+        streamed.Should().NotContain(line => line.Contains("Home Back"));
+        actualResult.Should().Contain("cancelled");
+    }
+
+    [Fact]
+    public void Test_ArmHub_CancelledDuringChildsBusyRetry_StopsBeforeSibling()
+    {
+        // Deterministically exercises Task 2's cancel-before-the-backoff-sleep check AND
+        // proves ArmOrDisarmNetwork's catch (OperationCanceledException) arm intercepts it
+        // ahead of the generic catch (Exception ex) — if it didn't, the loop would wrongly
+        // treat this as an ordinary per-item failure and go on to attempt the sibling below.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var cts = new CancellationTokenSource();
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+        apiMethods.OnPostCalled = url => { if (url.Contains("700007")) cts.Cancel(); };
+        var alwaysBusyCamera = Duck.Implement<IHomeScreenCamera>(new { id = 700007L, Name = "Always Busy Cancel Target", Network_Id = 700000L });
+        var siblingCamera = Duck.Implement<IHomeScreenCamera>(new { id = 700009L, Name = "Sibling Never Reached", Network_Id = 700000L });
+        blinkLib.CurrentSession!.Cameras = new List<IHomeScreenCamera> { alwaysBusyCamera, siblingCamera };
+        var network = Duck.Implement<IHomeScreenNetwork>(new { Id = 700000L, Name = "Retry Cancel Test", Armed = false });
+
+        var actualResult = blinkLib.Arm(network, TimeSpan.Zero, 1, cancellationToken: cts.Token);
+
+        actualResult.Should().NotContain("Sibling Never Reached");
+        actualResult.Should().Contain("cancelled");
+    }
+
+    [Fact]
     public void Test_DeviceFailedNotLoggedIn()
     {
         //assign

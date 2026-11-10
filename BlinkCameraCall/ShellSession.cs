@@ -159,15 +159,15 @@ public class ShellSession(BlinkLibrary library)
         return library.Snap(new[] { "n" + _currentDeviceName }, pollInterval, maxRetries);
     }
 
-    public string Arm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        _currentDeviceName is not null ? library.Arm(_currentDeviceName, pollInterval, maxRetries, _currentNetwork!.Id) :
-        _currentNetwork is not null ? library.Arm(_currentNetwork, pollInterval, maxRetries) :
-        library.Arm(pollInterval, maxRetries);
+    public string Arm(TimeSpan? pollInterval = null, int maxRetries = 120, Action<string>? onProgress = null, CancellationToken cancellationToken = default) =>
+        _currentDeviceName is not null ? library.Arm(_currentDeviceName, pollInterval, maxRetries, _currentNetwork!.Id, cancellationToken) :
+        _currentNetwork is not null ? library.Arm(_currentNetwork, pollInterval, maxRetries, onProgress, cancellationToken) :
+        library.Arm(pollInterval, maxRetries, onProgress, cancellationToken);
 
-    public string Disarm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        _currentDeviceName is not null ? library.Disarm(_currentDeviceName, pollInterval, maxRetries, _currentNetwork!.Id) :
-        _currentNetwork is not null ? library.Disarm(_currentNetwork, pollInterval, maxRetries) :
-        library.Disarm(pollInterval, maxRetries);
+    public string Disarm(TimeSpan? pollInterval = null, int maxRetries = 120, Action<string>? onProgress = null, CancellationToken cancellationToken = default) =>
+        _currentDeviceName is not null ? library.Disarm(_currentDeviceName, pollInterval, maxRetries, _currentNetwork!.Id, cancellationToken) :
+        _currentNetwork is not null ? library.Disarm(_currentNetwork, pollInterval, maxRetries, onProgress, cancellationToken) :
+        library.Disarm(pollInterval, maxRetries, onProgress, cancellationToken);
 
     public string DownloadByName(string name, TimeSpan? pollInterval = null, int maxRetries = 120, string? mediaDirectory = null)
     {
