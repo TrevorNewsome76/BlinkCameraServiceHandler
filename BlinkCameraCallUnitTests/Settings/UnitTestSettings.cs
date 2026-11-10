@@ -114,5 +114,95 @@ public class UnitTestSettings(ITestOutputHelper output)
         // Clear up
         HelperMethod_RemoveSettingsFile(path);
     }
+
+    [Fact]
+    public void Test_Load_FileMissingNewFields_DefaultsBothIntervals()
+    {
+        // assign
+        var path = $"{AppContext.BaseDirectory}";
+        var actualResult = Duck.Implement<IBlinkSettings>(new());
+
+        HelperMethod_RemoveSettingsFile(path);
+
+        // Hand-write a config.json missing the interval fields entirely.
+        File.WriteAllText($"{path}config.json", """
+        {
+            "Email": "test@email.com",
+            "Password": "PAssword",
+            "BaseUrl": "https://rest-prod.immedia-semi.com",
+            "HardwareId": ""
+        }
+        """);
+
+        // act
+        actualResult.Load(path);
+
+        // assert
+        Assert.Equal(20, actualResult.WatchIntervalSeconds);
+        Assert.Equal(5, actualResult.LocalWatchIntervalSeconds);
+
+        // Clear up
+        HelperMethod_RemoveSettingsFile(path);
+    }
+
+    [Fact]
+    public void Test_Load_FileHasStoredIntervals_UsesStoredValues()
+    {
+        // assign
+        var path = $"{AppContext.BaseDirectory}";
+        var actualResult = Duck.Implement<IBlinkSettings>(new());
+        var storedSettings = Duck.Implement<IBlinkSettings>(new
+        {
+            BaseUrl = "https://rest-prod.immedia-semi.com",
+            Email = "test@email.com",
+            Password = "PAssword",
+            HardwareId = string.Empty,
+            WatchIntervalSeconds = 45,
+            LocalWatchIntervalSeconds = 8,
+        });
+
+        HelperMethod_RemoveSettingsFile(path);
+        storedSettings.Save(path);
+
+        // act
+        actualResult.Load(path);
+
+        // assert
+        Assert.Equal(45, actualResult.WatchIntervalSeconds);
+        Assert.Equal(8, actualResult.LocalWatchIntervalSeconds);
+
+        // Clear up
+        HelperMethod_RemoveSettingsFile(path);
+    }
+
+    [Fact]
+    public void Test_SaveThenLoad_RoundTripsBothIntervals()
+    {
+        // assign
+        var path = $"{AppContext.BaseDirectory}";
+        var actualResult = Duck.Implement<IBlinkSettings>(new());
+        var settingsToSave = Duck.Implement<IBlinkSettings>(new
+        {
+            BaseUrl = "https://rest-prod.immedia-semi.com",
+            Email = "test@email.com",
+            Password = "PAssword",
+            HardwareId = string.Empty,
+            WatchIntervalSeconds = 30,
+            LocalWatchIntervalSeconds = 10,
+        });
+
+        HelperMethod_RemoveSettingsFile(path);
+
+        // act
+        settingsToSave.Save(path);
+        actualResult.Load(path);
+
+        // assert
+        Assert.Equal(30, actualResult.WatchIntervalSeconds);
+        Assert.Equal(10, actualResult.LocalWatchIntervalSeconds);
+
+        // Clear up
+        HelperMethod_RemoveSettingsFile(path);
+    }
 }
 

@@ -11,6 +11,8 @@ public class MockSettings
         Email = "test@email.com",
         Password = "PAssword",
         HardwareId = string.Empty,
+        WatchIntervalSeconds = 20,
+        LocalWatchIntervalSeconds = 5,
     });
 
     public static IBlinkSettings CreateSettings(string email, string password) => Duck.Implement<IBlinkSettings>(new
@@ -19,6 +21,8 @@ public class MockSettings
         Email = email,
         Password = password,
         HardwareId = string.Empty,
+        WatchIntervalSeconds = 20,
+        LocalWatchIntervalSeconds = 5,
     });
 
     public static IBlinkSettings CreateTwoFactorSettings() => Duck.Implement<IBlinkSettings>(new
@@ -27,6 +31,8 @@ public class MockSettings
         Email = "twofactor@email.com",
         Password = "PAssword",
         HardwareId = string.Empty,
+        WatchIntervalSeconds = 20,
+        LocalWatchIntervalSeconds = 5,
     });
 
     public static IBlinkSettings CreateNoThumbnailSettings() => Duck.Implement<IBlinkSettings>(new
@@ -35,5 +41,7 @@ public class MockSettings
         Email = "nothumbnail@email.com",
         Password = "PAssword",
         HardwareId = string.Empty,
+        WatchIntervalSeconds = 20,
+        LocalWatchIntervalSeconds = 5,
     });
 }

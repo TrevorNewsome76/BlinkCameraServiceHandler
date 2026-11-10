@@ -14,6 +14,8 @@ public static class SettingsFileExtension
             Password = "PAssword",
             Baseurl = "https://rest-prod.immedia-semi.com",
             HardwareId = string.Empty,
+            WatchIntervalSeconds = 20,
+            LocalWatchIntervalSeconds = 5,
         });
 
         if (File.Exists($"{path}config.json"))
@@ -23,6 +25,8 @@ public static class SettingsFileExtension
         settings.Email = fileSettings.Email;
         settings.Password = fileSettings.Password;
         settings.HardwareId = fileSettings.HardwareId ?? string.Empty;
+        settings.WatchIntervalSeconds = fileSettings.WatchIntervalSeconds == 0 ? 20 : fileSettings.WatchIntervalSeconds;
+        settings.LocalWatchIntervalSeconds = fileSettings.LocalWatchIntervalSeconds == 0 ? 5 : fileSettings.LocalWatchIntervalSeconds;
     }
 
     public static void Save(this IBlinkSettings settings, string path) =>
