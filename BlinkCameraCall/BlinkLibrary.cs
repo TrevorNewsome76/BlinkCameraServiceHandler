@@ -250,7 +250,9 @@ public class BlinkLibrary(IAdapter adapter)
         }
         catch (Exception ex)
         {
-            lines.Add($"Could not refresh device state: {ex.Message}. Run MAP.");
+            var refreshFailureLine = $"Could not refresh device state: {ex.Message}. Run MAP.";
+            lines.Add(refreshFailureLine);
+            onProgress?.Invoke(refreshFailureLine);
         }
 
         return string.Join(Environment.NewLine, lines);
@@ -274,7 +276,9 @@ public class BlinkLibrary(IAdapter adapter)
         }
         catch (Exception ex)
         {
-            lines.Add($"Could not refresh device state: {ex.Message}. Run MAP.");
+            var refreshFailureLine = $"Could not refresh device state: {ex.Message}. Run MAP.";
+            lines.Add(refreshFailureLine);
+            onProgress?.Invoke(refreshFailureLine);
         }
 
         return string.Join(Environment.NewLine, lines);
@@ -338,7 +342,9 @@ public class BlinkLibrary(IAdapter adapter)
         }
         catch (Exception ex)
         {
-            lines.Add($"Could not refresh device state: {ex.Message}. Run MAP.");
+            var refreshFailureLine = $"Could not refresh device state: {ex.Message}. Run MAP.";
+            lines.Add(refreshFailureLine);
+            onProgress?.Invoke(refreshFailureLine);
         }
 
         return string.Join(Environment.NewLine, lines);

@@ -308,6 +308,7 @@ Sending instructions, please wait...
 Hub 'Home Front': armed.
   Camera 'Pergoda': armed.
 Arming hub 'Home Front' cancelled (2/4 attempted).
+Arming the system cancelled (2/4 attempted across 1 of 2 hubs).
 ```
 
 System-wide, from the root:

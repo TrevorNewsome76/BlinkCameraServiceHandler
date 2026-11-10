@@ -422,6 +422,29 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmHub_RefreshFailure_AlsoStreamsLineToOnProgress()
+    {
+        // Double-print fix: previously the hub-level refresh-failure line was only ever
+        // added to the returned string, never passed to onProgress, so it was the one line
+        // that would silently disappear once Program.cs stops re-printing the full return
+        // value. The returned string must still contain it (unchanged), AND onProgress must
+        // now also receive it.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var homeFront = blinkLib.CurrentSession!.Networks!.Single(n => n.Name == "Home Front");
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+        apiMethods.ThrowOnHomeScreen = true;
+        var streamedLines = new List<string>();
+
+        var actualResult = blinkLib.Arm(homeFront, TimeSpan.Zero, 1, onProgress: streamedLines.Add);
+
+        actualResult.Should().Contain("Could not refresh device state:");
+        streamedLines.Should().Contain(line => line.Contains("Could not refresh device state:"));
+    }
+
+    [Fact]
     public void Test_DisarmHub_NetworkItselfRejected_StillCompletesWithoutThrowing()
     {
         // "Home Back" (263310) has zero child devices, so this isolates the network's OWN

@@ -128,10 +128,10 @@ namespace BlinkCameraCall
                                 Console.WriteLine(shellSession.Trigger());
                                 break;
                             case "arm":
-                                Console.WriteLine(RunWithProgress(progressSpinner, cts => shellSession.Arm(onProgress: progressSpinner.WriteLine, cancellationToken: cts.Token), () => shellSession.Arm()));
+                                RunArmDisarm(progressSpinner, (onProgress, ct) => shellSession.Arm(onProgress: onProgress, cancellationToken: ct), () => shellSession.Arm());
                                 break;
                             case "disarm":
-                                Console.WriteLine(RunWithProgress(progressSpinner, cts => shellSession.Disarm(onProgress: progressSpinner.WriteLine, cancellationToken: cts.Token), () => shellSession.Disarm()));
+                                RunArmDisarm(progressSpinner, (onProgress, ct) => shellSession.Disarm(onProgress: onProgress, cancellationToken: ct), () => shellSession.Disarm());
                                 break;
                             case "watch":
                                 Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink));
@@ -201,6 +201,17 @@ namespace BlinkCameraCall
         {
             if (blinkLibrary.IsLoggedIn)
                 Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink));
+        }
+
+        private static void RunArmDisarm(ProgressSpinner progressSpinner, Func<Action<string>, CancellationToken, string> runCancellable, Func<string> runPlain)
+        {
+            var streamed = false;
+            void OnProgress(string line) { streamed = true; progressSpinner.WriteLine(line); }
+
+            var result = RunWithProgress(progressSpinner, cts => runCancellable(OnProgress, cts.Token), runPlain);
+
+            if (!streamed)
+                Console.WriteLine(result);
         }
 
         private static string RunWithProgress(ProgressSpinner progressSpinner, Func<CancellationTokenSource, string> runCancellable, Func<string> runPlain)
