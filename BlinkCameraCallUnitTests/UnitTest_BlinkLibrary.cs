@@ -291,6 +291,51 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmFailed_BusyRejection_RetriesAndEventuallySucceeds()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var camera = Duck.Implement<IHomeScreenCamera>(new { id = 700001L, Name = "Busy Then OK", Network_Id = 700000L });
+        blinkLib.CurrentSession!.Cameras = new List<IHomeScreenCamera> { camera };
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+
+        var actualResult = blinkLib.Arm("Busy Then OK", TimeSpan.Zero, 1);
+
+        actualResult.Should().Be("Armed 'Busy Then OK'.");
+        apiMethods.BusyThenSucceedCallCount.Should().Be(3);
+    }
+
+    [Fact]
+    public void Test_ArmFailed_AlwaysBusy_GivesUpAfterExactlyThreeAttempts()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var camera = Duck.Implement<IHomeScreenCamera>(new { id = 700003L, Name = "Always Busy", Network_Id = 700000L });
+        blinkLib.CurrentSession!.Cameras = new List<IHomeScreenCamera> { camera };
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+
+        Assert.Throws<InvalidOperationException>(() => blinkLib.Arm("Always Busy", TimeSpan.Zero, 1));
+
+        apiMethods.AlwaysBusyCallCount.Should().Be(3);
+    }
+
+    [Fact]
+    public void Test_DisarmFailed_NonBusyRejection_DoesNotRetry()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+
+        Assert.Throws<InvalidOperationException>(() => blinkLib.Disarm("Garage", TimeSpan.Zero, 1));
+
+        apiMethods.GarageDisableCallCount.Should().Be(1);
+    }
+
+    [Fact]
     public void Test_ArmScoped_CrossHubNameCollision_ResolvesOnlyWithinGivenNetwork()
     {
         // Two different hubs each have a camera named "Pergoda" (one really is the "Home

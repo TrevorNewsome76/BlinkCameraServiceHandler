@@ -14,6 +14,14 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
     // Defaults to false, so every other test's behavior is unchanged.
     public bool ThrowOnHomeScreen { get; set; }
 
+    public int BusyThenSucceedCallCount { get; private set; }
+    public int AlwaysBusyCallCount { get; private set; }
+    public int GarageDisableCallCount { get; private set; }
+
+    // Test-only hook: lets a test cancel a token at the exact instant a POST happens, instead
+    // of racing a timer. Defaults to null, so every existing test is unaffected.
+    public Action<string>? OnPostCalled { get; set; }
+
     public bool SetAccessToken(string accessToken)
     {
         if (accessToken == "BU8fOjaF4E5POf4WTRm5wA")
@@ -46,6 +54,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
     public string? Post(string Url)
     {
+        OnPostCalled?.Invoke(Url);
+
         switch (Url)
         {
             case "https://rest-prod.immedia-semi.com/api/v4/account/134166/client/1486061/logout":
@@ -61,6 +71,7 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
             case "https://rest-007.immedia-semi.com/network/263178/camera/321380/enable":
                 return "{\"id\":1012,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/camera/321380/disable":
+                GarageDisableCallCount++;
                 return "{\"message\":\"system busy\"}";
             case "https://rest-007.immedia-semi.com/network/263178/arm":
                 return "{\"id\":1020,\"network_id\":263178,\"complete\":false,\"status_code\":908}";
@@ -98,6 +109,18 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":610}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/sync_modules/390959/local_storage/manifest/710/clip/request/11":
                 return "{\"id\":920}";
+            case "https://rest-007.immedia-semi.com/network/700000/camera/700001/enable":
+                BusyThenSucceedCallCount++;
+                return BusyThenSucceedCallCount >= 3
+                    ? "{\"id\":700002,\"network_id\":700000,\"complete\":false,\"status_code\":908}"
+                    : "{\"message\":\"System is busy, please wait\",\"error\":null,\"code\":307}";
+            case "https://rest-007.immedia-semi.com/network/700000/camera/700003/enable":
+                AlwaysBusyCallCount++;
+                return "{\"message\":\"System is busy, please wait\",\"error\":null,\"code\":307}";
+            case "https://rest-007.immedia-semi.com/network/700000/arm":
+                return "{\"id\":700008,\"network_id\":700000,\"complete\":false,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/700000/camera/700007/enable":
+                return "{\"message\":\"System is busy, please wait\",\"error\":null,\"code\":307}";
             case "https://rest-007.immedia-semi.com/network/700000/camera/700005/enable":
                 // Id is intentionally > Int32.MaxValue (same magnitude as the real logged id,
                 // 3796763377): that's the specific trigger for Shadow.Quack's JsonProxy failure
@@ -183,6 +206,10 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":1022,\"network_id\":263310,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/700000/command/3700000006":
                 return "{\"id\":3700000006,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/700000/command/700002":
+                return "{\"id\":700002,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/700000/command/700008":
+                return "{\"id\":700008,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }

@@ -44,23 +44,23 @@ public static class AdapterExtension
     public static ICommandStatusResponse? TriggerDoorbellSnapshot(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         Transactions.SystemTriggerDoorbellSnapshot(account, networkId, doorbellId, pollInterval, maxRetries);
 
-    public static ICommandStatusResponse? EnableCamera(this IAdapter adapter, IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        Transactions.SystemEnableCamera(account, networkId, cameraId, pollInterval, maxRetries);
+    public static ICommandStatusResponse? EnableCamera(this IAdapter adapter, IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        Transactions.SystemEnableCamera(account, networkId, cameraId, pollInterval, maxRetries, cancellationToken);
 
-    public static ICommandStatusResponse? DisableCamera(this IAdapter adapter, IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        Transactions.SystemDisableCamera(account, networkId, cameraId, pollInterval, maxRetries);
+    public static ICommandStatusResponse? DisableCamera(this IAdapter adapter, IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        Transactions.SystemDisableCamera(account, networkId, cameraId, pollInterval, maxRetries, cancellationToken);
 
-    public static ICommandStatusResponse? EnableDoorbell(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        Transactions.SystemEnableDoorbell(account, networkId, doorbellId, pollInterval, maxRetries);
+    public static ICommandStatusResponse? EnableDoorbell(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        Transactions.SystemEnableDoorbell(account, networkId, doorbellId, pollInterval, maxRetries, cancellationToken);
 
-    public static ICommandStatusResponse? DisableDoorbell(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        Transactions.SystemDisableDoorbell(account, networkId, doorbellId, pollInterval, maxRetries);
+    public static ICommandStatusResponse? DisableDoorbell(this IAdapter adapter, IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        Transactions.SystemDisableDoorbell(account, networkId, doorbellId, pollInterval, maxRetries, cancellationToken);
 
-    public static ICommandStatusResponse? ArmNetwork(this IAdapter adapter, IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        Transactions.SystemArmNetwork(account, networkId, pollInterval, maxRetries);
+    public static ICommandStatusResponse? ArmNetwork(this IAdapter adapter, IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        Transactions.SystemArmNetwork(account, networkId, pollInterval, maxRetries, cancellationToken);
 
-    public static ICommandStatusResponse? DisarmNetwork(this IAdapter adapter, IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        Transactions.SystemDisarmNetwork(account, networkId, pollInterval, maxRetries);
+    public static ICommandStatusResponse? DisarmNetwork(this IAdapter adapter, IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        Transactions.SystemDisarmNetwork(account, networkId, pollInterval, maxRetries, cancellationToken);
 
     public static IMediaChangedResponse? GetRecentMedia(this IAdapter adapter, IAuthAccount account, DateTime sinceUtc) =>
         Transactions.SystemGetRecentMedia(account, sinceUtc);

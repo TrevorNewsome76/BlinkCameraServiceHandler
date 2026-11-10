@@ -102,23 +102,23 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     public ICommandStatusResponse? SystemTriggerDoorbellSnapshot(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
         TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/thumbnail", networkId, account.Tier, pollInterval, maxRetries);
 
-    public ICommandStatusResponse? SystemEnableCamera(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/enable", networkId, account.Tier, pollInterval, maxRetries);
+    public ICommandStatusResponse? SystemEnableCamera(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/enable", networkId, account.Tier, pollInterval, maxRetries, cancellationToken);
 
-    public ICommandStatusResponse? SystemDisableCamera(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/disable", networkId, account.Tier, pollInterval, maxRetries);
+    public ICommandStatusResponse? SystemDisableCamera(IAuthAccount account, long networkId, long cameraId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/camera/{cameraId}/disable", networkId, account.Tier, pollInterval, maxRetries, cancellationToken);
 
-    public ICommandStatusResponse? SystemEnableDoorbell(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/enable", networkId, account.Tier, pollInterval, maxRetries);
+    public ICommandStatusResponse? SystemEnableDoorbell(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/enable", networkId, account.Tier, pollInterval, maxRetries, cancellationToken);
 
-    public ICommandStatusResponse? SystemDisableDoorbell(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/disable", networkId, account.Tier, pollInterval, maxRetries);
+    public ICommandStatusResponse? SystemDisableDoorbell(IAuthAccount account, long networkId, long doorbellId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/doorbells/{doorbellId}/disable", networkId, account.Tier, pollInterval, maxRetries, cancellationToken);
 
-    public ICommandStatusResponse? SystemArmNetwork(IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/arm", networkId, account.Tier, pollInterval, maxRetries);
+    public ICommandStatusResponse? SystemArmNetwork(IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/arm", networkId, account.Tier, pollInterval, maxRetries, cancellationToken);
 
-    public ICommandStatusResponse? SystemDisarmNetwork(IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/disarm", networkId, account.Tier, pollInterval, maxRetries);
+    public ICommandStatusResponse? SystemDisarmNetwork(IAuthAccount account, long networkId, TimeSpan? pollInterval = null, int maxRetries = 120, CancellationToken cancellationToken = default) =>
+        TriggerSnapshot($"https://rest-{account.Tier}.immedia-semi.com/network/{networkId}/disarm", networkId, account.Tier, pollInterval, maxRetries, cancellationToken);
 
     public IMediaChangedResponse? SystemGetRecentMedia(IAuthAccount account, DateTime sinceUtc)
     {
@@ -169,16 +169,48 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
         return CommandPolling.WaitForCommandComplete(ApiDriver, commandUrl, pollInterval, maxRetries);
     }
 
-    private static ICommandStatusResponse? TriggerSnapshot(string triggerUrl, long networkId, string tier, TimeSpan? pollInterval, int maxRetries)
+    private static bool IsBusyRejection(string rawResponse)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(rawResponse);
+            return doc.RootElement.TryGetProperty("code", out var code) && code.TryGetInt32(out var value) && value == 307;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static ICommandStatusResponse? TriggerSnapshot(string triggerUrl, long networkId, string tier, TimeSpan? pollInterval, int maxRetries, CancellationToken cancellationToken = default)
     {
         if (ApiDriver is null)
             return null;
 
-        var rawTrigger = ApiDriver.Post(triggerUrl) ?? string.Empty;
-        var triggerResult = rawTrigger.ParseCommandStatus();
+        // Reuses pollInterval as the backoff's base unit (not a separate parameter) so
+        // tests that pass TimeSpan.Zero for pollInterval get instant retries, the same
+        // way they already get instant completion-polling.
+        var backoffUnit = pollInterval ?? TimeSpan.FromSeconds(1);
+        var busyDelays = new[] { backoffUnit, backoffUnit * 2 };
+        var rawTrigger = string.Empty;
+        var triggerResult = Duck.Implement<ICommandStatusResponse>(new { });
 
-        if (triggerResult.Id == 0)
-            throw new InvalidOperationException($"Blink rejected the request: {rawTrigger}");
+        for (var attempt = 0; attempt <= busyDelays.Length; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            rawTrigger = ApiDriver.Post(triggerUrl) ?? string.Empty;
+            triggerResult = rawTrigger.ParseCommandStatus();
+
+            if (triggerResult.Id != 0)
+                break;
+
+            if (!IsBusyRejection(rawTrigger) || attempt == busyDelays.Length)
+                throw new InvalidOperationException($"Blink rejected the request: {rawTrigger}");
+
+            cancellationToken.ThrowIfCancellationRequested();
+            Thread.Sleep(busyDelays[attempt]);
+        }
 
         var commandUrl = $"https://rest-{tier}.immedia-semi.com/network/{networkId}/command/{triggerResult.Id}";
 
