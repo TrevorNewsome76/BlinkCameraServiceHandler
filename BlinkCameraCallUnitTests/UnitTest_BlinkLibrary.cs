@@ -236,6 +236,24 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmSuccessful_RealWorldRichResponseShape_NoLongerMisreportedAsRejected()
+    {
+        // Reproduces the exact bug this whole plan exists to fix: before the fix,
+        // Blink's real (much richer than any prior mock) acceptance response made
+        // this throw "Blink rejected the request" even though the command had
+        // actually been accepted.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var camera = Duck.Implement<IHomeScreenCamera>(new { id = 700005L, Name = "Real Shape Camera", Network_Id = 700000L });
+        blinkLib.CurrentSession!.Cameras = new List<IHomeScreenCamera> { camera };
+
+        var actualResult = blinkLib.Arm("Real Shape Camera", TimeSpan.Zero, 1);
+
+        actualResult.Should().Be("Armed 'Real Shape Camera'.");
+    }
+
+    [Fact]
     public void Test_ArmSuccessful_Doorbell()
     {
         var mockAdapter = new MockAdapter(MockSettings.CreateSettings());

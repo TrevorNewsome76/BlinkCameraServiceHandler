@@ -98,6 +98,21 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":610}";
             case "https://rest-007.immedia-semi.com/api/v1/accounts/134166/networks/263178/sync_modules/390959/local_storage/manifest/710/clip/request/11":
                 return "{\"id\":920}";
+            case "https://rest-007.immedia-semi.com/network/700000/camera/700005/enable":
+                // Id is intentionally > Int32.MaxValue (same magnitude as the real logged id,
+                // 3796763377): that's the specific trigger for Shadow.Quack's JsonProxy failure
+                // on this response shape, not the shape/missing-fields alone. A small id here
+                // would parse fine even with the old, buggy parser and wouldn't prove anything.
+                return "{\"id\":3700000006,\"created_at\":\"2026-11-10T10:52:36+00:00\",\"updated_at\":\"2026-11-10T10:52:36+00:00\"," +
+                    "\"deleted_at\":null,\"execute_time\":\"2026-11-10T10:52:36+00:00\",\"command\":\"arm\",\"state_stage\":\"rest\"," +
+                    "\"stage_rest\":\"2026-11-10T10:52:36+00:00\",\"stage_cs_db\":null,\"stage_cs_sent\":null,\"stage_sm\":null," +
+                    "\"stage_dev\":null,\"stage_is\":null,\"stage_lv\":null,\"stage_vs\":null,\"state_condition\":\"new\"," +
+                    "\"sm_ack\":null,\"lfr_ack\":null,\"sequence\":null,\"attempts\":0,\"transaction\":\"kkfBuDvzrR1QfKEN\"," +
+                    "\"player_transaction\":\"C7OBxH7JOPUCdT2l\",\"server\":null,\"duration\":null,\"by_whom\":\"iPhone 15 Pro - 50.1\"," +
+                    "\"diagnostic\":false,\"debug\":\"\",\"opts_1\":0,\"target\":null,\"target_id\":null," +
+                    "\"trace_parent\":\"00-6af2f77448f7d09132dac3131b0d7665-274f7ef1d25543b6-00\",\"sync_module_id\":1447602," +
+                    "\"ring_setup_id\":null,\"parent_command_id\":null,\"camera_id\":null,\"siren_id\":null,\"firmware_id\":null," +
+                    "\"network_id\":700000,\"account_id\":134166}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }
@@ -166,6 +181,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                 return "{\"id\":1020,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263310/command/1022":
                 return "{\"id\":1022,\"network_id\":263310,\"complete\":true,\"status_code\":908}";
+            case "https://rest-007.immedia-semi.com/network/700000/command/3700000006":
+                return "{\"id\":3700000006,\"network_id\":700000,\"complete\":true,\"status_code\":908}";
             default:
                 return MockData.AuthLogoutIncorrectResponse().Serialize();
         }

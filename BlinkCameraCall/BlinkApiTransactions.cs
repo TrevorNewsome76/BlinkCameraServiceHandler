@@ -159,7 +159,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
 
         var clipUrl = BuildLocalStorageClipUrl(account, networkId, syncModuleId, manifestId, clipId);
         var rawPrepare = ApiDriver.Post(clipUrl) ?? string.Empty;
-        var prepareResult = rawPrepare.Deserialize<ICommandStatusResponse>();
+        var prepareResult = rawPrepare.ParseCommandStatus();
 
         if (prepareResult.Id == 0)
             throw new InvalidOperationException($"Blink rejected the request: {rawPrepare}");
@@ -175,7 +175,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
             return null;
 
         var rawTrigger = ApiDriver.Post(triggerUrl) ?? string.Empty;
-        var triggerResult = rawTrigger.Deserialize<ICommandStatusResponse>();
+        var triggerResult = rawTrigger.ParseCommandStatus();
 
         if (triggerResult.Id == 0)
             throw new InvalidOperationException($"Blink rejected the request: {rawTrigger}");

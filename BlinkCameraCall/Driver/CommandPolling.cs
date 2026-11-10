@@ -16,7 +16,7 @@ public static class CommandPolling
 
         for (var attempt = 0; attempt < maxRetries; attempt++)
         {
-            var status = (api.Get(commandStatusUrl) ?? string.Empty).Deserialize<ICommandStatusResponse>();
+            var status = (api.Get(commandStatusUrl) ?? string.Empty).ParseCommandStatus();
 
             if (status.Complete)
                 return status;
