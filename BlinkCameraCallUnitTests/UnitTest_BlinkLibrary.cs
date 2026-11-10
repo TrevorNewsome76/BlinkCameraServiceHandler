@@ -322,6 +322,38 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmFailed_AlwaysBusy_CancellationDuringBackoffWait_InterruptsPromptly()
+    {
+        // Proves cancellation requested *during* the busy-retry backoff wait is honored
+        // immediately, not only once the wait fully elapses. Uses CancelAfter (an
+        // independent timer) rather than cancelling synchronously inside OnPostCalled, so
+        // the signal genuinely arrives mid-wait regardless of whether the retry loop's own
+        // thread is currently blocked in a non-interruptible Thread.Sleep (the old, buggy
+        // behavior) or waiting on the token's WaitHandle (the fix).
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        var camera = Duck.Implement<IHomeScreenCamera>(new { id = 700003L, Name = "Always Busy", Network_Id = 700000L });
+        blinkLib.CurrentSession!.Cameras = new List<IHomeScreenCamera> { camera };
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+        var cts = new CancellationTokenSource();
+
+        apiMethods.OnPostCalled = url =>
+        {
+            if (url.Contains("700003"))
+                cts.CancelAfter(TimeSpan.FromMilliseconds(100));
+        };
+
+        var stopwatch = global::System.Diagnostics.Stopwatch.StartNew();
+        var actualResult = blinkLib.Arm("Always Busy", TimeSpan.FromSeconds(5), 1, cancellationToken: cts.Token);
+        stopwatch.Stop();
+
+        actualResult.Should().Be("Arming 'Always Busy' cancelled.");
+        stopwatch.Elapsed.Should().BeLessThan(TimeSpan.FromSeconds(2),
+            "cancellation during the backoff wait should interrupt it immediately, not block for the full ~5s delay");
+    }
+
+    [Fact]
     public void Test_DisarmFailed_NonBusyRejection_DoesNotRetry()
     {
         var mockAdapter = new MockAdapter(MockSettings.CreateSettings());

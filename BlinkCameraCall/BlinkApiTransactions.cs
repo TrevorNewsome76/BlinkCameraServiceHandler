@@ -209,7 +209,8 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
                 throw new InvalidOperationException($"Blink rejected the request: {rawTrigger}");
 
             cancellationToken.ThrowIfCancellationRequested();
-            Thread.Sleep(busyDelays[attempt]);
+            if (cancellationToken.WaitHandle.WaitOne(busyDelays[attempt]))
+                cancellationToken.ThrowIfCancellationRequested();
         }
 
         var commandUrl = $"https://rest-{tier}.immedia-semi.com/network/{networkId}/command/{triggerResult.Id}";

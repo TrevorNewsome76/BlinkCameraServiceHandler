@@ -19,6 +19,17 @@ public class UnitTest_ProgressSpinner
     }
 
     [Fact]
+    public void Test_Start_EndsItsOwnLineBeforeAnythingElseIsWritten()
+    {
+        var fake = new FakeConsoleIO([]);
+        var spinner = new ProgressSpinner(fake);
+
+        spinner.Start("Sending instructions, please wait...");
+
+        fake.WrittenText[0].Should().EndWith(Environment.NewLine);
+    }
+
+    [Fact]
     public void Test_Tick_WhileActive_WritesAnotherFrame()
     {
         var fake = new FakeConsoleIO([]);

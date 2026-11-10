@@ -353,8 +353,8 @@ Disarmed 'Pergoda'.
 | `No single device named '<name>' was found. Run MAP to see exact names.` | Device-level only — the device no longer resolves to exactly one camera/doorbell. |
 | `Blink did not finish arming '<name>' in time.` (or `disarming`) | Device-level: the whole command failed this way. At hub/system level, this exact wording shows up as just that one item's own line instead — the rest of the operation still completes and gets reported. |
 | `Arming '<name>' cancelled.` (or `Disarming`) | Device-level: you pressed Esc/Ctrl+C before it finished. |
-| `Arming hub '<name>' cancelled (<x>/<y> attempted).` (or `Disarming`) | Hub-level, or one hub's line within a cancelled system-wide run: `<x>` of `<y>` items in that hub were attempted before the cancel took effect. |
-| `Arming the system cancelled (<x>/<y> attempted across <n> of <total> hubs).` (or `Disarming`) | System-wide: how far it got, in total, before the cancel took effect. |
+| `Arming hub '<name>' cancelled (<x>/<y> attempted).` (or `Disarming`) | Hub-level, or one hub's line within a cancelled system-wide run: of the `<y>` items in that hub actually attempted before the cancel took effect, `<x>` succeeded. Any remaining items in that hub were never reached, and aren't counted in either number. |
+| `Arming the system cancelled (<x>/<y> attempted across <n> of <total> hubs).` (or `Disarming`) | System-wide: of the `<y>` items attempted in total (across the `<n>` hubs reached) before the cancel took effect, `<x>` succeeded. |
 
 Device-level `ARM`/`DISARM` only ever changes that one camera/doorbell's own
 enabled state — it never reaches up and changes its hub's own armed state,

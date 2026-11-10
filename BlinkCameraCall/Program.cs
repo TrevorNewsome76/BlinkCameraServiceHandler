@@ -240,11 +240,11 @@ namespace BlinkCameraCall
                     Thread.Sleep(120);
                 }
 
-                progressSpinner.Stop();
-                return task.Result;
+                return task.GetAwaiter().GetResult();
             }
             finally
             {
+                progressSpinner.Stop();
                 Console.TreatControlCAsInput = false;
             }
         }

@@ -659,10 +659,12 @@ already naturally `cd`-scoped.
 
 §7.9 shipped with a real bug, found only once this app hit a live account:
 every `ARM`/`DISARM`-family command (and, as it turned out, `SNAP`/
-`TRIGGER`/local-storage prepare too, since they all share `TriggerSnapshot`)
-reported `Blink rejected the request` even when Blink had genuinely
-accepted it. This subsection documents the fix, the retry behaviour added
-alongside it, and the cancellation/streaming support layered on top.
+`TRIGGER` too, since they share `TriggerSnapshot`; local-storage prepare
+hit the same underlying parsing bug independently, through its own copy
+of the same `Deserialize<T>()` call) reported `Blink rejected the
+request` even when Blink had genuinely accepted it. This subsection
+documents the fix, the retry behaviour added alongside it, and the
+cancellation/streaming support layered on top.
 
 - **Root cause.** Blink's real command-acceptance response is a large,
   rich JSON object whose `id` field is itself large enough to exceed

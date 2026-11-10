@@ -11,7 +11,7 @@ public class ProgressSpinner(IConsoleIO io)
     {
         lock (_lock)
         {
-            io.Write(message + " ");
+            io.Write(message + Environment.NewLine);
             _active = true;
             DrawFrame();
         }
