@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BlinkCameraCall.Extensions;
 using BlinkCommon.Interfaces;
 using BlinkCommon.Interfaces.Auth;
@@ -13,15 +14,17 @@ public static class EventWatchPolling
         Action<ICloudMediaItem> onNewEvent,
         Action<Exception> onError,
         CancellationToken token,
-        TimeSpan? pollInterval = null,
+        AdaptivePollInterval interval,
+        Action<TimeSpan, TimeSpan, TimeSpan>? onIntervalTooShort = null,
+        Action<TimeSpan>? onIntervalPersisted = null,
         int maxIterations = int.MaxValue)
     {
-        var interval = pollInterval ?? TimeSpan.FromSeconds(20);
         var sinceUtc = DateTime.UtcNow;
         var seenIds = new HashSet<long>();
 
         for (var iteration = 0; iteration < maxIterations && !token.IsCancellationRequested; iteration++)
         {
+            var stopwatch = Stopwatch.StartNew();
             try
             {
                 var response = adapter.GetRecentMedia(account, sinceUtc);
@@ -38,11 +41,21 @@ public static class EventWatchPolling
             {
                 onError(ex);
             }
+            stopwatch.Stop();
+
+            var elapsed = stopwatch.Elapsed;
+            var newInterval = interval.ReportRound(elapsed, elapsed);
+            if (newInterval.HasValue)
+            {
+                onIntervalTooShort?.Invoke(elapsed, elapsed, newInterval.Value);
+                onIntervalPersisted?.Invoke(newInterval.Value);
+            }
 
             if (token.IsCancellationRequested)
                 break;
 
-            Thread.Sleep(interval);
+            if (token.WaitHandle.WaitOne(interval.Current))
+                break;
         }
     }
 }

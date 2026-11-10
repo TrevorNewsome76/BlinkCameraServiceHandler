@@ -529,7 +529,7 @@ public class BlinkLibrary(IAdapter adapter)
         return _lastCloudMedia.ToCloudMediaListString(hours);
     }
 
-    public string Watch(string[] arguments, Action<string> onAlert)
+    public string Watch(string[] arguments, Action<string> onAlert, int persistedIntervalSeconds = 20, Action<int>? onIntervalPersisted = null)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
             return "Not currently logged into Blink service.";
@@ -537,10 +537,22 @@ public class BlinkLibrary(IAdapter adapter)
         if (_watchCts is not null)
             return "Already watching. Use UNWATCH to stop.";
 
-        var intervalSeconds = arguments.ExtractWatchIntervalSeconds();
+        var explicitIntervalSeconds = ExtractExplicitWatchIntervalSeconds(arguments);
+        int startingSeconds;
+        if (explicitIntervalSeconds.HasValue)
+        {
+            startingSeconds = explicitIntervalSeconds.Value;
+            onIntervalPersisted?.Invoke(startingSeconds);
+        }
+        else
+        {
+            startingSeconds = persistedIntervalSeconds;
+        }
+
         var account = _sessionDetails.Account!;
         var cts = new CancellationTokenSource();
         _watchCts = cts;
+        var interval = new AdaptivePollInterval(TimeSpan.FromSeconds(startingSeconds));
 
         Task.Run(() => EventWatchPolling.Run(
             adapter,
@@ -548,9 +560,20 @@ public class BlinkLibrary(IAdapter adapter)
             item => onAlert($"[ALERT] New event: {item.Device_Name} at {item.Created_At:yyyy-MM-dd HH:mm:ss} UTC (id {item.Id})"),
             ex => onAlert($"[WATCH] Error checking for new events: {ex.Message}"),
             cts.Token,
-            TimeSpan.FromSeconds(intervalSeconds)));
+            interval,
+            (total, slowest, newInterval) => onAlert($"[WATCH] Checking for new events took {total.TotalSeconds:0.0}s — longer than the current interval, extending it to {newInterval.TotalSeconds:0.0}s."),
+            newInterval => onIntervalPersisted?.Invoke((int)newInterval.TotalSeconds)));
 
-        return $"Watching for new events every {intervalSeconds}s. Use UNWATCH to stop.";
+        return $"Watching for new events every {startingSeconds}s. Use UNWATCH to stop.";
+    }
+
+    private static int? ExtractExplicitWatchIntervalSeconds(string[] arguments)
+    {
+        foreach (var argument in arguments)
+            if (argument.StartsWith('s') && argument.Length > 1 && int.TryParse(argument.Substring(1), out var seconds))
+                return seconds;
+
+        return null;
     }
 
     public string Unwatch()
