@@ -634,13 +634,18 @@ already naturally `cd`-scoped.
   camera still finishes and prints every line, ending in a correct partial
   success count.
 - **`RefreshDeviceLists` only got extracted now, not earlier, because this
-  is the first time a *second* call site needed the exact same four-line
-  block.** `Get`, `Snap`, and `Map` each already had their own inline copy;
-  `Arm`/`Disarm` would have made a fourth and fifth copy, which is what
-  made pulling it into one private helper worth doing here rather than
-  leaving it duplicated further. The three pre-existing call sites are
-  untouched — only the two new ones (hub-level and system-level `Arm`/
-  `Disarm`) use the new helper.
+  feature is the first thing to need the exact same four-line block at more
+  than one call site at once.** `Get`, `Snap`, and `Map` each already had
+  their own inline copy. `Arm`/`Disarm` add four more call sites of their
+  own: the device-level `Arm(string)`/`Disarm(string)` pair shares one
+  private helper (`ArmOrDisarm`) with a single call, but hub-level
+  `Arm(IHomeScreenNetwork)` and `Disarm(IHomeScreenNetwork)` each call it
+  independently (they don't share a helper the way the device- and
+  system-level pairs do), and system-level `Arm()`/`Disarm()` share their
+  own private helper (`ArmOrDisarmSystem`) with one more call. Left inline,
+  that would have grown the three pre-existing copies to seven; extracting
+  one private helper now, rather than writing out four more copies of the
+  same block, is what made doing it here worth it.
 - **`ShellSession.Arm`/`Disarm` add zero new business logic**, exactly like
   `Trigger`: each just checks which of `_currentDeviceName`/
   `_currentNetwork`/neither is set and delegates to the matching
