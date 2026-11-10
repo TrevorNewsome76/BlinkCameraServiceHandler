@@ -675,6 +675,14 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         var actualResult = blinkLib.Arm(network, TimeSpan.Zero, 1, cancellationToken: cts.Token);
 
         actualResult.Should().NotContain("Sibling Never Reached");
+        // The specific catch (OperationCanceledException) arm returns immediately without
+        // emitting a line for the item it caught the cancellation on. If that arm were ever
+        // removed or reordered after the generic catch (Exception ex), the loop would instead
+        // Emit a line naming this camera before falling through to the top-of-loop guard that
+        // stops the sibling — same "cancelled" wording and same absence of the sibling's name,
+        // but WITH a line for this camera. This assertion is what actually distinguishes the
+        // two behaviors; the two assertions above pass identically in both.
+        actualResult.Should().NotContain("Always Busy Cancel Target");
         actualResult.Should().Contain("cancelled");
     }
 
