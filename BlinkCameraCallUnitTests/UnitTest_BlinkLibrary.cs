@@ -429,6 +429,35 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmSystem_NoHubs_ReportsNothingToArm()
+    {
+        // Networks is a public settable property and CurrentSession exposes the live,
+        // already-logged-in session instance, so an empty hub list can be set directly
+        // without going through Map() or any new mock fixture.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.CurrentSession!.Networks = new List<IHomeScreenNetwork>();
+
+        var actualResult = blinkLib.Arm();
+
+        actualResult.Should().BeEquivalentTo("No hubs to arm.");
+    }
+
+    [Fact]
+    public void Test_DisarmSystem_NoHubs_ReportsNothingToDisarm()
+    {
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.CurrentSession!.Networks = new List<IHomeScreenNetwork>();
+
+        var actualResult = blinkLib.Disarm();
+
+        actualResult.Should().BeEquivalentTo("No hubs to disarm.");
+    }
+
+    [Fact]
     public void Test_DeviceFailedNotLoggedIn()
     {
         //assign
