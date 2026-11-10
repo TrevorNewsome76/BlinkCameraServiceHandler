@@ -333,6 +333,14 @@ enabled state — it never reaches up and changes its hub's own armed state,
 even though arming/disarming a hub (standalone or as part of the whole
 system) does cascade down to every device underneath it.
 
+Blink tracks a device's enabled state and its hub's armed state as two
+separate flags, not one. That means arming a single device doesn't arm a
+disarmed hub, and the device still won't detect motion until both are
+armed — a device you just armed sits idle under a hub that's still
+disarmed, same as a disabled device would under an armed hub. If you want a
+device to actually start detecting motion, make sure its hub is armed too
+(hub-level or system-wide `ARM`, or `MAP`/`DEVICE -n<name>` to check).
+
 ## Single device detail (`DEVICE`)
 
 `DEVICE -n<name>` prints a detailed view of one camera or doorbell: network,
