@@ -587,6 +587,69 @@ the shell keeps accepting commands normally while it runs.
   deterministic window to call `NotifyExternal` without a sleep-based
   guess.
 
+### 7.9 The ARM/DISARM commands
+
+`ARM`/`DISARM` take no arguments at all — `cd` to the level you want (root,
+hub, or device) first, same convention `TRIGGER` already uses. They're the
+one command pair in this app with no flag-style equivalent at all: the
+design spec's non-goals deliberately skipped inventing a second flag letter
+just to disambiguate a hub name from a device name, since the feature is
+already naturally `cd`-scoped.
+
+- **Network "armed" and device "enabled" are two different flags on
+  Blink's side, not one.** Per blinkpy/community research (not confirmed
+  live — see §10), only the network itself has a true armed/disarmed state
+  (`POST /network/{id}/arm`/`/disarm`); a camera/doorbell's own `Enabled`
+  flag (already modeled, shown by `MAP` as `[enabled, ...]`/
+  `[disabled, ...]`) is independent of it — a disabled camera in an armed
+  network still won't detect motion, and an enabled camera in a disarmed
+  network won't either. "Device-level arm/disarm" in this codebase is
+  therefore just this project's name for toggling `Enabled`; there's no
+  third, separate per-device armed flag underneath it.
+- **Six new async-command methods, each a one-liner into the existing
+  private `TriggerSnapshot` helper** (`BlinkApiTransactions.cs`):
+  `SystemArmNetwork`/`SystemDisarmNetwork`, `SystemEnableCamera`/
+  `SystemDisableCamera`, `SystemEnableDoorbell`/`SystemDisableDoorbell`.
+  Each URL matches its existing snapshot-trigger sibling's *family* rather
+  than inventing a new one: camera enable/disable reuses
+  `SystemTriggerCameraSnapshot`'s old-style `/network/{id}/camera/{id}/...`
+  path, doorbell enable/disable reuses `SystemTriggerDoorbellSnapshot`'s
+  `/api/v1/accounts/{account}/networks/{id}/doorbells/{id}/...` path, and
+  network arm/disarm is the new `/network/{id}/arm`/`/disarm` pair — only
+  the final path segment changes in every case, and all six still go
+  through the same POST-then-poll-`/network/{id}/command/{id}` shape
+  `TriggerSnapshot` already handles.
+- **`ArmOrDisarmNetwork` is the one cascading helper both hub-level and
+  system-level `Arm`/`Disarm` call.** It arms/disarms the network itself,
+  then every camera/doorbell whose `Network_Id` matches it (reading from
+  `_sessionDetails.Cameras ?? new List<...>()`/`.Doorbells ?? new
+  List<...>()`, never assuming `Map()` already ran), wrapping *each*
+  item — the network's own call included, not special-cased out of this —
+  in its own `try { ... } catch (Exception ex)`. The catch is deliberately
+  broad, not just the `InvalidOperationException` an outright rejection
+  throws, so one bad item (a network blip, an unexpected exception type,
+  anything) can never stop the rest of the loop from running and being
+  reported. That's the "continue and report" behavior the spec called for,
+  and it's why a system-wide `ARM` across two hubs with one timed-out
+  camera still finishes and prints every line, ending in a correct partial
+  success count.
+- **`RefreshDeviceLists` only got extracted now, not earlier, because this
+  is the first time a *second* call site needed the exact same four-line
+  block.** `Get`, `Snap`, and `Map` each already had their own inline copy;
+  `Arm`/`Disarm` would have made a fourth and fifth copy, which is what
+  made pulling it into one private helper worth doing here rather than
+  leaving it duplicated further. The three pre-existing call sites are
+  untouched — only the two new ones (hub-level and system-level `Arm`/
+  `Disarm`) use the new helper.
+- **`ShellSession.Arm`/`Disarm` add zero new business logic**, exactly like
+  `Trigger`: each just checks which of `_currentDeviceName`/
+  `_currentNetwork`/neither is set and delegates to the matching
+  `BlinkLibrary` overload. Unlike `Trigger` (which has an invalid
+  context — root or hub — and returns its own "not in a device directory"
+  message), every context is valid for `ARM`/`DISARM`, so there's no guard
+  to add at this layer at all; `BlinkLibrary` already produces every "not
+  logged in"/"not loaded" message on its own.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per
@@ -665,6 +728,15 @@ or deliberately decide to still skip:
 - **The `media/changed` response shape behind `VIDEOS`/`DOWNLOAD` (§7.5) is a
   reconstruction, not a confirmed live response.** Expect it to need the same
   live-error-driven field-name fix the OAuth rewrite needed for login.
+- **The six `ARM`/`DISARM` endpoints (§7.9) are a best-effort
+  reconstruction, like `VIDEOS`/`IMAGE` above — not confirmed against a
+  live account.** Expect the same kind of live-error-driven URL/field fix if
+  Blink's real shape differs.
+- **Owls (Blink Mini cameras), Sirens, Chimes, and `Doorbell_Buttons` are
+  never armed or disarmed** by hub/system-level `ARM`/`DISARM` (§7.9) — they're
+  still unmodeled raw `string[]` placeholders with no id/`Enabled` to call
+  enable/disable against, so a cascading arm/disarm silently skips them,
+  consistent with `MAP` already showing them only as a bare count.
 - **No persisted command history across runs.** `ShellLineEditor`'s Up/Down
   recall (§7.7) is in-memory for the session only, matching how
   `_sessionDetails`/caches already reset on restart.

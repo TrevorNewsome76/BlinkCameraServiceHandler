@@ -3,8 +3,9 @@
 A Windows console application for logging into a personal [Blink](https://blinkforhome.com/)
 home-security account and running commands against it: login (including Blink's
 two-factor codes), logout, client-trust PIN verification, fetching your account's
-"home screen" (networks, sync modules, cameras, doorbells), and watching for new
-doorbell/motion events in the background with console alerts.
+"home screen" (networks, sync modules, cameras, doorbells), arming/disarming at
+the system, hub, or device level, and watching for new doorbell/motion events
+in the background with console alerts.
 
 - **Using it:** see [docs/USER_GUIDE.md](docs/USER_GUIDE.md) for setup, commands, and
   troubleshooting.

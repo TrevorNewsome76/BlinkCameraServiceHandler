@@ -8,8 +8,9 @@ modules, cameras, doorbells), printing a readable device map, inspecting a
 single device, triggering and downloading fresh snapshots, listing/
 downloading cloud and SD-card video clips, navigating hubs and devices
 as a `cd`/`ls` tree instead of repeating a device name on every command,
-and watching for new doorbell/motion events in the background with
-console alerts.
+arming/disarming at the system, hub, or device level depending on where
+you're `cd`'d, and watching for new doorbell/motion events in the
+background with console alerts.
 
 If you want to know *how* it works instead of how to use it, see
 [DEVELOPER.md](DEVELOPER.md).
@@ -130,6 +131,8 @@ for what that looks like and how to stop/restart it.
 | Change directory | `CD <name>`, `CD ..`, `CD \` | Moves into a hub or device, back up a level, or straight back to the root of the tree. |
 | List current directory | `LS` | Lists hubs at the root, devices in a hub, or a device's media, depending on where you are. |
 | Trigger (current device) | `TRIGGER` | Takes a fresh snapshot of the device you're currently `cd`'d into. |
+| Arm (current context) | `ARM` | Arms the system/hub/device you're currently `cd`'d into — see below. |
+| Disarm (current context) | `DISARM` | Disarms the system/hub/device you're currently `cd`'d into — see below. |
 | Download by name | `DOWNLOAD <name>` | Downloads a media item by the name `LS` showed for it (device directory only). |
 | Watch for new events | `WATCH [-s<seconds>]` | Starts watching for new doorbell/motion events in the background (default interval: 20 seconds). Starts automatically on login — see below. |
 | Stop watching | `UNWATCH` | Stops the background watch started by `WATCH` (or automatically on login). |
@@ -264,6 +267,71 @@ replacement.
 | `Not in a device directory. cd into a camera or doorbell first.` | `TRIGGER` or bare `DOWNLOAD` was run at the root or in a hub. |
 | `Run LS first.` | Bare `DOWNLOAD <name>` was run before `LS` in this device directory (or after `cd`-ing elsewhere and back). |
 | `'<name>' wasn't in the last LS output.` | The name didn't match any entry from the last `LS`. |
+
+## Arming and disarming (ARM / DISARM)
+
+`ARM` and `DISARM` take **no arguments at all** — unlike every other device
+command, there's no flag-style equivalent. `cd` to wherever you want the
+command to target first, exactly the way `TRIGGER` already works:
+
+- At the root (`BC>`), it's **system-wide**: every hub, and every
+  camera/doorbell underneath each of them.
+- Inside a hub (`BC\<hub>>`), it's just **that hub**, and every
+  camera/doorbell underneath it.
+- Inside a device (`BC\<hub>\<device>>`), it's just **that one
+  camera/doorbell**.
+
+A hub/system-level command keeps going even if one item fails (offline,
+rejected, timed out) — it reports every item's own outcome, then a closing
+success count, instead of stopping partway through or hiding a partial
+failure.
+
+System-wide, from the root:
+
+```
+BC> arm
+Hub 'Home Front': armed.
+  Camera 'Pergoda': armed.
+  Camera 'Garage': Blink did not finish arming 'Garage' in time.
+  Doorbell 'Front door bell': armed.
+Armed hub 'Home Front' (3/4 succeeded).
+Hub 'Home Back': armed.
+Armed hub 'Home Back' (1/1 succeeded).
+Armed the system (4/5 succeeded across 2 hubs).
+```
+
+One hub:
+
+```
+BC> cd Home Back
+Now in hub 'Home Back'.
+BC\Home Back> arm
+Hub 'Home Back': armed.
+Armed hub 'Home Back' (1/1 succeeded).
+```
+
+One device:
+
+```
+BC> cd Home Front
+Now in hub 'Home Front'.
+BC\Home Front> cd Pergoda
+Now in device 'Pergoda'.
+BC\Home Front\Pergoda> disarm
+Disarmed 'Pergoda'.
+```
+
+| Message | What it means |
+|---|---|
+| `Not currently logged into Blink service.` | Log in first. |
+| `Run MAP or GET first to load your devices.` | You're logged in, but haven't fetched your device list yet this session. |
+| `No single device named '<name>' was found. Run MAP to see exact names.` | Device-level only — the device no longer resolves to exactly one camera/doorbell. |
+| `Blink did not finish arming '<name>' in time.` (or `disarming`) | Device-level: the whole command failed this way. At hub/system level, this exact wording shows up as just that one item's own line instead — the rest of the operation still completes and gets reported. |
+
+Device-level `ARM`/`DISARM` only ever changes that one camera/doorbell's own
+enabled state — it never reaches up and changes its hub's own armed state,
+even though arming/disarming a hub (standalone or as part of the whole
+system) does cascade down to every device underneath it.
 
 ## Single device detail (`DEVICE`)
 
