@@ -126,6 +126,12 @@ namespace BlinkCameraCall
                             case "trigger":
                                 Console.WriteLine(shellSession.Trigger());
                                 break;
+                            case "arm":
+                                Console.WriteLine(shellSession.Arm());
+                                break;
+                            case "disarm":
+                                Console.WriteLine(shellSession.Disarm());
+                                break;
                             case "watch":
                                 Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink));
                                 break;
@@ -157,6 +163,8 @@ namespace BlinkCameraCall
                                 Console.WriteLine("CD <name>|..|\\                   Changes directory between hubs and devices.");
                                 Console.WriteLine("LS                                Lists hubs, devices, or a device's media, depending on where you are.");
                                 Console.WriteLine("TRIGGER                          Takes a fresh snapshot of the current device (cd into one first).");
+                                Console.WriteLine("ARM                               Arms the current system/hub/device (cd to choose the level).");
+                                Console.WriteLine("DISARM                            Disarms the current system/hub/device (cd to choose the level).");
                                 Console.WriteLine("WATCH -s<seconds>                Watches for new doorbell/motion events in the background (default 20s).");
                                 Console.WriteLine("UNWATCH                          Stops watching for new events.");
                                 Console.WriteLine("DOWNLOAD <name>                  Downloads a media item by the name LS showed (device directory only).");

@@ -619,6 +619,88 @@ public class UnitTest_ShellSession
     }
 
     [Fact]
+    public void Test_Arm_AtRoot_DelegatesToSystemWide()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+
+        //act
+        var actualResult = shellSession.Arm(TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().StartWith("Hub 'Home Front': armed.");
+        actualResult.Should().Contain("Armed the system (");
+    }
+
+    [Fact]
+    public void Test_Arm_InHub_DelegatesToThatHubOnly()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Back");
+        var expected =
+            "Hub 'Home Back': armed." + Environment.NewLine +
+            "Armed hub 'Home Back' (1/1 succeeded).";
+
+        //act
+        var actualResult = shellSession.Arm(TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Test_Disarm_InDevice_DelegatesToThatDeviceOnly()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Front");
+        shellSession.ChangeDirectory("Pergoda");
+        var expected = "Disarmed 'Pergoda'.";
+
+        //act
+        var actualResult = shellSession.Disarm(TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().Be(expected);
+    }
+
+    [Fact]
+    public void Test_Arm_InDevice_AfterLogout_ReportsNotLoggedIn()
+    {
+        // ShellSession keeps its own cd state across LOGOUT (it doesn't listen for that event) —
+        // Arm must still surface BlinkLibrary's own guard, not crash on a stale reference.
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Front");
+        shellSession.ChangeDirectory("Pergoda");
+        blinkLib.Logout();
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = shellSession.Arm(TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
     public void Test_Prompt_ResetsAfterLogout()
     {
         //assign

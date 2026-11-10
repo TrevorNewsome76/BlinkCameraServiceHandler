@@ -255,4 +255,38 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
         //assert
         actualResult.Should().BeEquivalentTo(expectedResult);
     }
+
+    [Fact]
+    public void Test_CommandSplitArm_NoArguments_IsValid()
+    {
+        //assign
+        string consoleCommand = "arm";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "arm",
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitDisarm_NoArguments_IsValid()
+    {
+        //assign
+        string consoleCommand = "disarm";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "disarm",
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
 }

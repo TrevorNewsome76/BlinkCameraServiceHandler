@@ -159,6 +159,16 @@ public class ShellSession(BlinkLibrary library)
         return library.Snap(new[] { "n" + _currentDeviceName }, pollInterval, maxRetries);
     }
 
+    public string Arm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        _currentDeviceName is not null ? library.Arm(_currentDeviceName, pollInterval, maxRetries) :
+        _currentNetwork is not null ? library.Arm(_currentNetwork, pollInterval, maxRetries) :
+        library.Arm(pollInterval, maxRetries);
+
+    public string Disarm(TimeSpan? pollInterval = null, int maxRetries = 120) =>
+        _currentDeviceName is not null ? library.Disarm(_currentDeviceName, pollInterval, maxRetries) :
+        _currentNetwork is not null ? library.Disarm(_currentNetwork, pollInterval, maxRetries) :
+        library.Disarm(pollInterval, maxRetries);
+
     public string DownloadByName(string name, TimeSpan? pollInterval = null, int maxRetries = 120, string? mediaDirectory = null)
     {
         if (library.CurrentSession is null)

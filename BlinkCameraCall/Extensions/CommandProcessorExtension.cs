@@ -27,6 +27,8 @@ public static class CommandProcessorExtension
         "trigger",
         "watch",
         "unwatch",
+        "arm",
+        "disarm",
     };
 
     private static readonly string[] BarePositionalCommands = new[]
