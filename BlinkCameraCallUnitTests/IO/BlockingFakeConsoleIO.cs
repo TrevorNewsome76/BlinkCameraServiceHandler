@@ -32,6 +32,8 @@ public class BlockingFakeConsoleIO(int windowWidth = 80) : IConsoleIO
 
     public int WindowWidth { get; } = windowWidth;
 
+    public bool KeyAvailable => _keys.Count > 0;
+
     public void Enqueue(ConsoleKeyInfo key) => _keys.Add(key);
 
     public ConsoleKeyInfo ReadKey()

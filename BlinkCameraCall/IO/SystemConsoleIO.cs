@@ -18,5 +18,7 @@ public class SystemConsoleIO : IConsoleIO
 
     public ConsoleKeyInfo ReadKey() => Console.ReadKey(intercept: true);
 
+    public bool KeyAvailable => Console.KeyAvailable;
+
     public void Write(string text) => Console.Write(text);
 }

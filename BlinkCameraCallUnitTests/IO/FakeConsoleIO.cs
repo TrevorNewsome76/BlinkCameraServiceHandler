@@ -44,6 +44,8 @@ public class FakeConsoleIO : IConsoleIO
 
     public int WindowWidth { get; }
 
+    public bool KeyAvailable { get; set; }
+
     public ConsoleKeyInfo ReadKey()
     {
         if (_keys.Count == 0)
