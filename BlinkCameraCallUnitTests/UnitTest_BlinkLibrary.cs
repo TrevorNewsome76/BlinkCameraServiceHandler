@@ -273,6 +273,72 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_ArmScoped_CrossHubNameCollision_ResolvesOnlyWithinGivenNetwork()
+    {
+        // Two different hubs each have a camera named "Pergoda" (one really is the "Home
+        // Front" Pergoda fixture at id 321343; the other is a hand-built duplicate living in
+        // "Home Back", id 999001). Passing networkId: 263178L must resolve and act on the
+        // "Home Front" one specifically, proving device-level Arm no longer searches the whole
+        // account once scoped to a hub (Finding 1).
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        blinkLib.CurrentSession!.Cameras = Duck.Implement<List<IHomeScreenCamera>>(new[]
+        {
+            new { id = 321343L, Name = "Pergoda", Enabled = true, Status = "done", Battery = "ok", Network_Id = 263178L, Thumbnail = "" },
+            new { id = 999001L, Name = "Pergoda", Enabled = true, Status = "done", Battery = "ok", Network_Id = 263310L, Thumbnail = "" },
+        });
+
+        var actualResult = blinkLib.Arm("Pergoda", TimeSpan.Zero, 1, networkId: 263178L);
+
+        actualResult.Should().BeEquivalentTo("Armed 'Pergoda'.");
+    }
+
+    [Fact]
+    public void Test_ArmUnscoped_CrossHubNameCollision_IsAmbiguousAndNotFound()
+    {
+        // Same two-hub "Pergoda" collision as above, but called the old way with no networkId.
+        // DeviceLookupExtension's FindCameraByName (via SingleOrNull) searches the whole
+        // account, so two same-named cameras in different hubs now collapse to "not found"
+        // rather than silently resolving to whichever one happened to match first.
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        blinkLib.CurrentSession!.Cameras = Duck.Implement<List<IHomeScreenCamera>>(new[]
+        {
+            new { id = 321343L, Name = "Pergoda", Enabled = true, Status = "done", Battery = "ok", Network_Id = 263178L, Thumbnail = "" },
+            new { id = 999001L, Name = "Pergoda", Enabled = true, Status = "done", Battery = "ok", Network_Id = 263310L, Thumbnail = "" },
+        });
+
+        var actualResult = blinkLib.Arm("Pergoda", TimeSpan.Zero, 1);
+
+        actualResult.Should().BeEquivalentTo("No single device named 'Pergoda' was found. Run MAP to see exact names.");
+    }
+
+    [Fact]
+    public void Test_ArmSuccessful_Camera_RefreshFailureAppendsLineWithoutDiscardingReport()
+    {
+        // If the end-of-operation RefreshDeviceLists() call throws (e.g. a network blip on the
+        // refresh GetHomeScreen call), the already-collected "Armed '...'." report must still
+        // come back, with one extra line describing the refresh failure appended — not lost
+        // entirely (Finding 3).
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(new[] { "utest@email.com", "pPAssword" });
+        blinkLib.Map();
+        var apiMethods = (MockHttpClientApiHandler)Dependency.Shelf.RetrieveInstance<IApiMethods>();
+        apiMethods.ThrowOnHomeScreen = true;
+
+        var actualResult = blinkLib.Arm("Pergoda", TimeSpan.Zero, 1);
+
+        actualResult.Should().Be(
+            "Armed 'Pergoda'." + Environment.NewLine +
+            "Could not refresh device state: Simulated network failure. Run MAP.");
+    }
+
+    [Fact]
     public void Test_ArmHub_MixedOutcome_ContinuesAndReportsEveryItem()
     {
         var mockAdapter = new MockAdapter(MockSettings.CreateSettings());

@@ -115,12 +115,30 @@ public class BlinkLibrary(IAdapter adapter)
         return response is null ? "No devices found." : response.ToDeviceMapString();
     }
 
-    private (IHomeScreenCamera? Camera, IHomeScreenDoorbells? Doorbell) ResolveCameraOrDoorbell(string name)
+    private (IHomeScreenCamera? Camera, IHomeScreenDoorbells? Doorbell) ResolveCameraOrDoorbell(string name, long? networkId = null)
     {
-        var camera = _sessionDetails.FindCameraByName(name);
-        var doorbell = _sessionDetails.FindDoorbellByName(name);
+        if (networkId is null)
+        {
+            var camera = _sessionDetails.FindCameraByName(name);
+            var doorbell = _sessionDetails.FindDoorbellByName(name);
 
-        return camera is not null && doorbell is not null ? (null, null) : (camera, doorbell);
+            return camera is not null && doorbell is not null ? (null, null) : (camera, doorbell);
+        }
+
+        var networkCameras = (_sessionDetails.Cameras ?? new List<IHomeScreenCamera>())
+            .Where(c => c.Network_Id == networkId.Value)
+            .ToList();
+        var networkDoorbells = (_sessionDetails.Doorbells ?? new List<IHomeScreenDoorbells>())
+            .Where(d => d.Network_Id == networkId.Value)
+            .ToList();
+
+        var matchingCameras = networkCameras.Where(c => string.Equals(c.Name, name, StringComparison.OrdinalIgnoreCase)).ToList();
+        var matchingDoorbells = networkDoorbells.Where(d => string.Equals(d.Name, name, StringComparison.OrdinalIgnoreCase)).ToList();
+
+        var scopedCamera = matchingCameras.Count == 1 ? matchingCameras[0] : null;
+        var scopedDoorbell = matchingDoorbells.Count == 1 ? matchingDoorbells[0] : null;
+
+        return scopedCamera is not null && scopedDoorbell is not null ? (null, null) : (scopedCamera, scopedDoorbell);
     }
 
     public string Snap(string[] arguments, TimeSpan? pollInterval = null, int maxRetries = 120)
@@ -162,13 +180,13 @@ public class BlinkLibrary(IAdapter adapter)
         _sessionDetails.Doorbells = response?.Doorbells;
     }
 
-    public string Arm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        ArmOrDisarm(deviceName, arm: true, pollInterval, maxRetries);
+    public string Arm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120, long? networkId = null) =>
+        ArmOrDisarm(deviceName, arm: true, pollInterval, maxRetries, networkId);
 
-    public string Disarm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120) =>
-        ArmOrDisarm(deviceName, arm: false, pollInterval, maxRetries);
+    public string Disarm(string deviceName, TimeSpan? pollInterval = null, int maxRetries = 120, long? networkId = null) =>
+        ArmOrDisarm(deviceName, arm: false, pollInterval, maxRetries, networkId);
 
-    private string ArmOrDisarm(string deviceName, bool arm, TimeSpan? pollInterval, int maxRetries)
+    private string ArmOrDisarm(string deviceName, bool arm, TimeSpan? pollInterval, int maxRetries, long? networkId = null)
     {
         if (!(_sessionDetails?.LoggedInStatus ?? false))
             return "Not currently logged into Blink service.";
@@ -176,7 +194,7 @@ public class BlinkLibrary(IAdapter adapter)
         if (_sessionDetails.Cameras is null && _sessionDetails.Doorbells is null)
             return "Run MAP or GET first to load your devices.";
 
-        var (camera, doorbell) = ResolveCameraOrDoorbell(deviceName);
+        var (camera, doorbell) = ResolveCameraOrDoorbell(deviceName, networkId);
 
         if (camera is null && doorbell is null)
             return $"No single device named '{deviceName}' was found. Run MAP to see exact names.";
@@ -192,9 +210,18 @@ public class BlinkLibrary(IAdapter adapter)
         if (result is null)
             return $"Blink did not finish {(arm ? "arming" : "disarming")} '{deviceName}' in time.";
 
-        RefreshDeviceLists();
+        var resultText = $"{(arm ? "Armed" : "Disarmed")} '{deviceName}'.";
 
-        return $"{(arm ? "Armed" : "Disarmed")} '{deviceName}'.";
+        try
+        {
+            RefreshDeviceLists();
+        }
+        catch (Exception ex)
+        {
+            resultText += Environment.NewLine + $"Could not refresh device state: {ex.Message}. Run MAP.";
+        }
+
+        return resultText;
     }
 
     public string Arm(IHomeScreenNetwork network, TimeSpan? pollInterval = null, int maxRetries = 120)
@@ -204,7 +231,15 @@ public class BlinkLibrary(IAdapter adapter)
 
         var (lines, succeeded, total) = ArmOrDisarmNetwork(network, arm: true, pollInterval, maxRetries);
         lines.Add($"Armed hub '{network.Name}' ({succeeded}/{total} succeeded).");
-        RefreshDeviceLists();
+
+        try
+        {
+            RefreshDeviceLists();
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"Could not refresh device state: {ex.Message}. Run MAP.");
+        }
 
         return string.Join(Environment.NewLine, lines);
     }
@@ -216,7 +251,15 @@ public class BlinkLibrary(IAdapter adapter)
 
         var (lines, succeeded, total) = ArmOrDisarmNetwork(network, arm: false, pollInterval, maxRetries);
         lines.Add($"Disarmed hub '{network.Name}' ({succeeded}/{total} succeeded).");
-        RefreshDeviceLists();
+
+        try
+        {
+            RefreshDeviceLists();
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"Could not refresh device state: {ex.Message}. Run MAP.");
+        }
 
         return string.Join(Environment.NewLine, lines);
     }
@@ -254,7 +297,15 @@ public class BlinkLibrary(IAdapter adapter)
         }
 
         lines.Add($"{done} the system ({grandSucceeded}/{grandTotal} succeeded across {_sessionDetails.Networks.Count} hubs).");
-        RefreshDeviceLists();
+
+        try
+        {
+            RefreshDeviceLists();
+        }
+        catch (Exception ex)
+        {
+            lines.Add($"Could not refresh device state: {ex.Message}. Run MAP.");
+        }
 
         return string.Join(Environment.NewLine, lines);
     }

@@ -9,6 +9,11 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
 
     public int HomeScreenCallCount { get; private set; }
 
+    // Test-only hook: lets a specific test force the homescreen refresh to throw, to prove
+    // RefreshDeviceLists failures are caught rather than discarding an already-built report.
+    // Defaults to false, so every other test's behavior is unchanged.
+    public bool ThrowOnHomeScreen { get; set; }
+
     public bool SetAccessToken(string accessToken)
     {
         if (accessToken == "BU8fOjaF4E5POf4WTRm5wA")
@@ -135,6 +140,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
             case "https://rest-007.immedia-semi.com/network/263178/command/920":
                 return "{\"id\":920,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/api/v3/accounts/134166/homescreen":
+                if (ThrowOnHomeScreen)
+                    throw new InvalidOperationException("Simulated network failure");
                 HomeScreenCallCount++;
                 return (HomeScreenCallCount > 1
                     ? MockData.CreateValidHomeScreenResponseWithUpdatedThumbnail()
