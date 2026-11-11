@@ -246,15 +246,26 @@ prompt itself tracks this: it starts as `BC>` at the root, grows to
   a no-op.
 - `CD \` (or `CD /`) jumps straight back to the root from anywhere.
 - `LS` lists whatever is "in" your current directory. At the root or inside
-  a hub, it also shows each camera/doorbell's current thumbnail and recent
-  cloud clips (tagged `[current]`/`[cloud]`) indented underneath its usual
-  status line — so you can see what's available to download across a whole
-  hub, or your whole account, without `cd`-ing into every device one at a
-  time. This quick view never includes SD-card (local storage) clips, since
-  those need a per-sync-module manifest request that can take a few
-  seconds; a device with nothing to show just has no indented lines under
-  it. Inside a device itself, `LS` still shows the full merged listing,
-  including local storage, each tagged `[current]`, `[cloud]`, or `[local]`.
+  a hub, it also shows each camera/doorbell's current thumbnail, recent
+  cloud clips, and SD-card (local storage) clips (tagged `[current]`/
+  `[cloud]`/`[local]`) indented underneath its usual status line — so you
+  can see what's available to download across a whole hub, or your whole
+  account, without `cd`-ing into every device one at a time. A device with
+  nothing to show just has no indented lines under it.
+- Checking local storage means `LS` has to make one request per active
+  Sync Module, which can take a few seconds each. While it's running, the
+  shell shows the same `Sending instructions, please wait...` spinner
+  `ARM`/`DISARM` use, streaming a short one-line summary per device as
+  each Sync Module's check resolves (e.g. `Pergoda: found 2 new local
+  clip(s).`) — the full, properly-sorted listing still only appears once,
+  at the end, after everything's checked. Press **Esc** or **Ctrl+C** at
+  any point to cancel: whichever Sync Module is currently being checked is
+  allowed to finish, nothing further is attempted, and the listing you
+  already have prints immediately with a trailing note saying how many
+  more Sync Modules were never checked. If one Sync Module's check fails
+  (busy, offline, rejected), every device on it shows a `(local storage
+  unavailable: <reason>)` line instead, and `LS` moves on to the rest —
+  one bad Sync Module never blocks the others.
 
 `TRIGGER` and bare `DOWNLOAD <name>` only work inside a device directory
 (`cd` into a camera or doorbell first), and `DOWNLOAD <name>` additionally

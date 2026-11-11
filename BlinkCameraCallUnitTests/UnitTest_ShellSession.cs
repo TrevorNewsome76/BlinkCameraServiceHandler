@@ -399,6 +399,96 @@ public class UnitTest_ShellSession
     }
 
     [Fact]
+    public void Test_List_WithProgress_AtHub_MergesLocalStorageIntoFinalListing_AndStreamsSummaries()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(LoginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Home Front");
+        var streamed = new List<string>();
+        var expected =
+            "  Camera: Pergoda  [enabled, status done, battery ok, wifi 5]" + Environment.NewLine +
+            "    current  [current]" + Environment.NewLine +
+            "    2026-11-02_08-00-00  [local]" + Environment.NewLine +
+            "    2026-11-01_12-00-00  [cloud]" + Environment.NewLine +
+            "    2026-11-01_12-00-00_12  [local]" + Environment.NewLine +
+            "  Camera: Garage  [enabled, status done, battery ok, wifi 5]" + Environment.NewLine +
+            "    current  [current]" + Environment.NewLine +
+            "    2026-11-01_13-00-00  [cloud]" + Environment.NewLine +
+            "    2026-11-01_09-00-00  [local]" + Environment.NewLine +
+            "  Doorbell: Front door bell  [enabled, status done, battery ok, wifi 5]" + Environment.NewLine +
+            "    current  [current]";
+
+        //act
+        var actualResult = shellSession.List(streamed.Add, CancellationToken.None, TimeSpan.Zero, 3);
+
+        //assert
+        actualResult.Should().Be(expected);
+        streamed.Should().Equal("Pergoda: found 2 new local clip(s).", "Garage: found 1 new local clip(s).");
+    }
+
+    [Fact]
+    public void Test_List_WithProgress_OneSyncModuleRejected_ShowsInlineNoteAndStillChecksTheRest()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Solo Network");
+        var apiMethods = (MockHttpClientApiHandler)Shelf.RetrieveInstance<IApiMethods>();
+        var manifestRequestCount = 0;
+        apiMethods.OnPostCalled = url =>
+        {
+            if (url.Contains("local_storage/manifest/request") && !url.Contains("clip"))
+                manifestRequestCount++;
+        };
+
+        //act
+        var actualResult = shellSession.List(_ => { }, CancellationToken.None, TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().Contain("(local storage unavailable: Blink rejected the request:");
+        manifestRequestCount.Should().Be(6); // all 6 active sync modules attempted — the one rejection didn't stop the rest
+    }
+
+    [Fact]
+    public void Test_List_WithProgress_CancelledBetweenSyncModules_FinishesTheInFlightOneThenStopsWithANote()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var shellSession = new ShellSession(blinkLib);
+        shellSession.ChangeDirectory("Solo Network");
+        var apiMethods = (MockHttpClientApiHandler)Shelf.RetrieveInstance<IApiMethods>();
+        var cts = new CancellationTokenSource();
+        var manifestRequestCount = 0;
+        apiMethods.OnPostCalled = url =>
+        {
+            if (url.Contains("local_storage/manifest/request") && !url.Contains("clip"))
+            {
+                manifestRequestCount++;
+                cts.Cancel(); // fires during the FIRST sync module's own request — it still finishes
+            }
+        };
+
+        //act
+        var actualResult = shellSession.List(_ => { }, cts.Token, TimeSpan.Zero, 1);
+
+        //assert
+        actualResult.Should().Contain("(cancelled — stopped before checking 5 more sync module(s) for local storage.)");
+        manifestRequestCount.Should().Be(1); // the in-flight one finished; none of the other 5 were started
+    }
+
+    [Fact]
     public void Test_Trigger_NoCurrentDevice()
     {
         //assign

@@ -808,9 +808,10 @@ public class BlinkLibrary(IAdapter adapter)
     // Unlike ListDeviceMedia (one device at a time, used when cd'd into it), this fetches the
     // account's recent cloud media exactly once and distributes it across every device passed in
     // — avoids refetching the same 24h window once per device when listing many at once. Never
-    // includes local storage (that still requires a per-sync-module manifest request/poll, which
-    // is deliberately kept out of this fast, discovery-only view). Keyed by device id (not name)
-    // because a camera and a doorbell can legitimately share the same Name.
+    // includes local storage itself — that's a separate, slower, per-sync-module step
+    // (FetchSyncModuleManifest below), orchestrated by ShellSession so it can stream progress
+    // and support cancellation. Keyed by device id (not name) because a camera and a doorbell
+    // can legitimately share the same Name.
     internal (Dictionary<long, DeviceMediaListing> Cameras, Dictionary<long, DeviceMediaListing> Doorbells) ListAllDeviceMedia(
         IEnumerable<IHomeScreenCamera> cameras, IEnumerable<IHomeScreenDoorbells> doorbells)
     {
@@ -841,6 +842,18 @@ public class BlinkLibrary(IAdapter adapter)
         var doorbellListings = doorbells.ToDictionary(d => d.Id, d => BuildListing(d.Name, d.Thumbnail));
 
         return (cameraListings, doorbellListings);
+    }
+
+    // One sync module's request-then-poll cycle, reused by ShellSession's slower, cancellable
+    // "LS with local storage" path — kept here (not inlined in ShellSession) so it goes through
+    // the exact same adapter calls LocalClips/LocalWatch already use. Lets OperationCanceledException
+    // and any other exception propagate to the caller, which decides per-sync-module how to react.
+    internal ILocalStorageManifestResult? FetchSyncModuleManifest(IHomeScreenSyncModule syncModule, CancellationToken cancellationToken, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        var account = _sessionDetails.Account!;
+        var networkId = long.Parse(syncModule.Network_Id);
+        var requestResult = adapter.RequestLocalStorageManifest(account, networkId, syncModule.Id);
+        return adapter.GetLocalStorageManifest(account, networkId, syncModule.Id, requestResult!.Id, pollInterval, maxRetries, cancellationToken);
     }
 
     public string Help(string[] arguments)

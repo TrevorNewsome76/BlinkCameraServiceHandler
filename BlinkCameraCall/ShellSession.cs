@@ -166,6 +166,167 @@ public class ShellSession(BlinkLibrary library)
         return string.Join(Environment.NewLine, blocks);
     }
 
+    // Slower sibling of List(TimeSpan?, int) above: additionally expands the same hub/root-level
+    // listing with local storage, one sync module at a time (request-then-poll, same as LOCALCLIPS),
+    // streaming a short summary per device through onProgress as each sync module resolves. Single-
+    // device LS is unaffected — it already includes local storage and stays on the plain List() path.
+    // Cancelling finishes whatever sync module is currently in flight, then stops; a failed sync
+    // module is reported inline and checking continues with the next one.
+    public string List(Action<string> onProgress, CancellationToken cancellationToken, TimeSpan? pollInterval = null, int maxRetries = 120)
+    {
+        if (library.CurrentSession is null)
+        {
+            ClearAllState();
+            return "Not currently logged into Blink service.";
+        }
+
+        if (_currentDeviceName is not null)
+            return List(pollInterval, maxRetries);
+
+        if (library.CurrentSession.Networks is null)
+            return "Run MAP or GET first to load your devices.";
+
+        if (_currentNetwork is not null)
+        {
+            var cameras = (library.CurrentSession.Cameras ?? new List<IHomeScreenCamera>())
+                .Where(c => c.Network_Id == _currentNetwork.Id).ToList();
+            var doorbells = (library.CurrentSession.Doorbells ?? new List<IHomeScreenDoorbells>())
+                .Where(d => d.Network_Id == _currentNetwork.Id).ToList();
+
+            if (cameras.Count == 0 && doorbells.Count == 0)
+                return "No cameras or doorbells in this hub.";
+
+            var media = library.ListAllDeviceMedia(cameras, doorbells);
+            var cancelNote = AddLocalStorage(cameras, doorbells, media, onProgress, cancellationToken, pollInterval, maxRetries);
+
+            var lines = FormatDevicesWithMedia(cameras, doorbells, media);
+            if (cancelNote is not null)
+                lines.Add(cancelNote);
+
+            return string.Join(Environment.NewLine, lines);
+        }
+
+        var allCameras = library.CurrentSession.Cameras ?? new List<IHomeScreenCamera>();
+        var allDoorbells = library.CurrentSession.Doorbells ?? new List<IHomeScreenDoorbells>();
+        var allMedia = library.ListAllDeviceMedia(allCameras, allDoorbells);
+        var rootCancelNote = AddLocalStorage(allCameras, allDoorbells, allMedia, onProgress, cancellationToken, pollInterval, maxRetries);
+
+        var allBlocks = library.CurrentSession.Networks.Select(network =>
+        {
+            var networkCameras = allCameras.Where(c => c.Network_Id == network.Id).ToList();
+            var networkDoorbells = allDoorbells.Where(d => d.Network_Id == network.Id).ToList();
+
+            var lines = new List<string> { network.FormatNetworkLine() };
+            lines.AddRange(networkCameras.Count == 0 && networkDoorbells.Count == 0
+                ? new[] { "  (no cameras or doorbells)" }
+                : FormatDevicesWithMedia(networkCameras, networkDoorbells, allMedia));
+
+            return string.Join(Environment.NewLine, lines);
+        }).ToList();
+
+        var result = string.Join(Environment.NewLine, allBlocks);
+        return rootCancelNote is null ? result : result + Environment.NewLine + rootCancelNote;
+    }
+
+    // Returns a trailing "(cancelled ...)" note if cancellation stopped it early, else null.
+    private string? AddLocalStorage(
+        List<IHomeScreenCamera> cameras,
+        List<IHomeScreenDoorbells> doorbells,
+        (Dictionary<long, DeviceMediaListing> Cameras, Dictionary<long, DeviceMediaListing> Doorbells) media,
+        Action<string> onProgress,
+        CancellationToken cancellationToken,
+        TimeSpan? pollInterval,
+        int maxRetries)
+    {
+        var syncModules = (library.CurrentSession!.SyncModules ?? new List<IHomeScreenSyncModule>())
+            .Where(s => s.Local_Storage_Status == "active")
+            .Where(s => cameras.Any(c => c.Network_Id.ToString() == s.Network_Id) || doorbells.Any(d => d.Network_Id.ToString() == s.Network_Id))
+            .ToList();
+
+        for (var i = 0; i < syncModules.Count; i++)
+        {
+            if (cancellationToken.IsCancellationRequested)
+                return CancelledNote(syncModules.Count - i);
+
+            var syncModule = syncModules[i];
+            List<ILocalStorageClip> clips;
+            try
+            {
+                // Deliberately CancellationToken.None, not the live token: this sync module is
+                // already "in flight" once started, and the agreed behavior is to finish it
+                // rather than interrupt it mid-poll (the live token is only re-checked at the
+                // top of the loop, before the *next* sync module starts). LOCALWATCH's own
+                // background loop is the caller that actually needs mid-poll interruption.
+                var manifest = library.FetchSyncModuleManifest(syncModule, CancellationToken.None, pollInterval, maxRetries);
+                clips = manifest?.Clips ?? new List<ILocalStorageClip>();
+            }
+            catch (Exception ex)
+            {
+                foreach (var camera in cameras.Where(c => c.Network_Id.ToString() == syncModule.Network_Id))
+                {
+                    AppendLocalStorageError(media.Cameras, camera.id, ex.Message);
+                    onProgress($"{camera.Name}: local storage unavailable: {ex.Message}");
+                }
+                foreach (var doorbell in doorbells.Where(d => d.Network_Id.ToString() == syncModule.Network_Id))
+                {
+                    AppendLocalStorageError(media.Doorbells, doorbell.Id, ex.Message);
+                    onProgress($"{doorbell.Name}: local storage unavailable: {ex.Message}");
+                }
+                continue;
+            }
+
+            foreach (var camera in cameras.Where(c => c.Network_Id.ToString() == syncModule.Network_Id))
+            {
+                var added = AppendLocalClips(media.Cameras, camera.id, camera.Name, clips);
+                if (added > 0)
+                    onProgress($"{camera.Name}: found {added} new local clip(s).");
+            }
+            foreach (var doorbell in doorbells.Where(d => d.Network_Id.ToString() == syncModule.Network_Id))
+            {
+                var added = AppendLocalClips(media.Doorbells, doorbell.Id, doorbell.Name, clips);
+                if (added > 0)
+                    onProgress($"{doorbell.Name}: found {added} new local clip(s).");
+            }
+        }
+
+        return null;
+
+        static string CancelledNote(int remaining) =>
+            $"(cancelled — stopped before checking {remaining} more sync module(s) for local storage.)";
+    }
+
+    private static int AppendLocalClips(Dictionary<long, DeviceMediaListing> listings, long deviceId, string deviceName, List<ILocalStorageClip> clips)
+    {
+        if (!listings.TryGetValue(deviceId, out var listing))
+            listings[deviceId] = listing = new DeviceMediaListing(new List<DeviceMediaEntry>());
+
+        var seenNames = listing.Entries.Select(e => e.Name).ToHashSet();
+        var added = 0;
+
+        foreach (var clip in clips.Where(c => string.Equals(c.Camera_Name, deviceName, StringComparison.OrdinalIgnoreCase)))
+        {
+            var name = clip.Created_At.ToUniversalTime().ToString("yyyy-MM-dd_HH-mm-ss");
+            if (!seenNames.Add(name))
+            {
+                name = $"{name}_{clip.Id}";
+                seenNames.Add(name);
+            }
+
+            listing.Entries.Add(new DeviceMediaEntry(name, DeviceMediaKind.Local, clip.Created_At, null, clip, null, null));
+            added++;
+        }
+
+        return added;
+    }
+
+    private static void AppendLocalStorageError(Dictionary<long, DeviceMediaListing> listings, long deviceId, string reason)
+    {
+        if (!listings.TryGetValue(deviceId, out var listing))
+            listings[deviceId] = listing = new DeviceMediaListing(new List<DeviceMediaEntry>());
+
+        listing.Entries.Add(new DeviceMediaEntry($"(local storage unavailable: {reason})", DeviceMediaKind.Error, null, null, null, null, null));
+    }
+
     private static List<string> FormatDevicesWithMedia(
         List<IHomeScreenCamera> cameras,
         List<IHomeScreenDoorbells> doorbells,

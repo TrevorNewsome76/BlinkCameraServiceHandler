@@ -893,6 +893,66 @@ and the adaptive, persisted polling interval both watchers now share.
   calls both `StopWatch()` and `StopLocalWatch()`, so logging out never
   leaves either watcher running against an invalidated session.
 
+### 7.12 `LS` at hub/root level, local storage, and two bugs this surfaced
+
+Prompted by a real account that turned out to be local-storage-only:
+the hub/root `LS` aggregation (`ShellSession.FormatDevicesWithMedia`/
+`BlinkLibrary.ListAllDeviceMedia`) originally showed each device's
+current thumbnail and cloud clips only, deliberately excluding local
+storage to stay fast. For an all-local-storage account that made the
+feature nearly useless, so it was extended to include local storage too,
+accepting the latency.
+
+- **Why it's a separate, slower path (`ShellSession.List(Action<string>,
+  CancellationToken, ...)`), not folded into the fast one.** Checking
+  local storage means one request-then-poll cycle per *active* Sync
+  Module (`BlinkLibrary.FetchSyncModuleManifest`, the same
+  `RequestLocalStorageManifest`/`GetLocalStorageManifest` pair
+  `LocalClips` already uses) — each can take a few seconds. `Program.cs`
+  wraps this path in the same `RunWithProgress` spinner `ARM`/`DISARM`
+  use, but **not** `RunArmDisarm`'s streamed-lines-suppress-the-final-
+  print logic: for `ARM`/`DISARM` the streamed lines *are* the complete
+  output, but for `LS` the streamed lines are only short summaries
+  (`"{name}: found {n} new local clip(s)."` or an error note) — the full,
+  correctly sorted tree is the only complete output, and it always
+  prints once at the end regardless of what streamed. Getting this wrong
+  (reusing `RunArmDisarm` as-is) would have reintroduced the exact
+  double-print bug fixed earlier in §7.10, just for a different pair of
+  outputs instead of the same one twice.
+- **Why the sync module currently being checked finishes, rather than
+  getting interrupted, on cancel.** `ManifestPolling.WaitForManifestReady`
+  is already cancellable mid-poll — built for `LOCALWATCH`, which wants
+  immediate responsiveness to `UNLOCALWATCH`. `ShellSession.AddLocalStorage`
+  deliberately calls `FetchSyncModuleManifest` with `CancellationToken.None`
+  for that reason: it wants "finish whatever's in flight, then stop,"
+  the same contract `ARM`/`DISARM`'s busy-retry already uses, not
+  LOCALWATCH's "stop as soon as possible." The live cancellation token is
+  only re-checked at the top of the loop, before the *next* Sync Module
+  starts.
+- **Two bugs a real account exposed while building this**, both fixed
+  alongside it, neither specific to `LS`:
+  - `IApiTransactions.SystemRequestLocalStorageManifest` was still
+    calling the old `Deserialize<T>()` path (`JsonSerilizerExtension`,
+    §3.1's fragile `JsonProxy`-based deserializer), not the safe
+    `System.Text.Json`-based parser the rest of this codebase moved to
+    in §7.10. A real manifest-request id large enough to exceed
+    `Int32.MaxValue` crashed `JsonProxy`, which `Deserialize<T>()`
+    swallowed into an all-default (`Id = 0`) object — misreporting a
+    genuine success as `"Blink rejected the request"`. Fixed the same
+    way as §7.10's fix: a small, dedicated `ManifestRequestJsonExtension.ParseManifestRequest`
+    using plain `JsonDocument`, in place of `Deserialize<T>()`. This was
+    silently breaking `LOCALCLIPS` and `LOCALWATCH` on any real account,
+    not just this new `LS` path.
+  - `LOCALWATCH`/`UNLOCALWATCH` were unreachable from the console even
+    though `Program.cs`'s `switch` already handled them correctly:
+    `CommandProcessorExtension.ValidateCommand` checks every typed
+    command against its own separate `ValidCommands` array *before* the
+    switch is ever reached, and `localwatch`/`unlocalwatch` were never
+    added to that array when the feature shipped (`watch`/`unwatch`/
+    `arm`/`disarm` were). A command the switch can handle is still
+    `"Unknown command."` if it isn't in this second, independent list —
+    worth remembering any time a new top-level command is added.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per

@@ -123,7 +123,7 @@ namespace BlinkCameraCall
                                 Console.WriteLine(shellSession.ChangeDirectory(command.Arguments![0]));
                                 break;
                             case "ls":
-                                Console.WriteLine(shellSession.List());
+                                Console.WriteLine(RunWithProgress(progressSpinner, cts => shellSession.List(progressSpinner.WriteLine, cts.Token), () => shellSession.List()));
                                 break;
                             case "trigger":
                                 Console.WriteLine(shellSession.Trigger());
@@ -197,7 +197,7 @@ namespace BlinkCameraCall
                                 Console.WriteLine("VIDEOS -h<hours>                 Lists recent cloud video events (default 24h).");
                                 Console.WriteLine("DOWNLOAD -i<id>                  Downloads a cloud clip (id from VIDEOS) to media/.");
                                 Console.WriteLine("CD <name>|..|\\                   Changes directory between hubs and devices.");
-                                Console.WriteLine("LS                                Lists hubs, devices, or a device's media, depending on where you are.");
+                                Console.WriteLine("LS                                Lists hubs, devices, or a device's media, depending on where you are. At hub/root level, also checks local storage (press Esc to cancel).");
                                 Console.WriteLine("TRIGGER                          Takes a fresh snapshot of the current device (cd into one first).");
                                 Console.WriteLine("ARM                               Arms the current system/hub/device (cd to choose the level). Press Esc to cancel.");
                                 Console.WriteLine("DISARM                            Disarms the current system/hub/device (cd to choose the level). Press Esc to cancel.");
