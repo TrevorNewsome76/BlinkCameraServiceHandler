@@ -257,6 +257,41 @@ public class UnitTest_CommandProcessorExtension(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Test_CommandSplitLocalwatch_WithIntervalFlag_IsValid()
+    {
+        //assign
+        string consoleCommand = "localwatch -s30";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "localwatch",
+            Arguments = new string[] { "s30" },
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
+    public void Test_CommandSplitUnlocalwatch_NoArguments_IsValid()
+    {
+        //assign
+        string consoleCommand = "unlocalwatch";
+        var expectedResult = Duck.Implement<ICommandAndArguments>(new
+        {
+            Command = "unlocalwatch",
+        });
+
+        //act
+        var actualResult = consoleCommand.ProcessCommandString();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expectedResult);
+    }
+
+    [Fact]
     public void Test_CommandSplitArm_NoArguments_IsValid()
     {
         //assign
