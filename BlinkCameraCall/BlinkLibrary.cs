@@ -805,6 +805,44 @@ public class BlinkLibrary(IAdapter adapter)
         return new DeviceMediaListing(entries);
     }
 
+    // Unlike ListDeviceMedia (one device at a time, used when cd'd into it), this fetches the
+    // account's recent cloud media exactly once and distributes it across every device passed in
+    // — avoids refetching the same 24h window once per device when listing many at once. Never
+    // includes local storage (that still requires a per-sync-module manifest request/poll, which
+    // is deliberately kept out of this fast, discovery-only view). Keyed by device id (not name)
+    // because a camera and a doorbell can legitimately share the same Name.
+    internal (Dictionary<long, DeviceMediaListing> Cameras, Dictionary<long, DeviceMediaListing> Doorbells) ListAllDeviceMedia(
+        IEnumerable<IHomeScreenCamera> cameras, IEnumerable<IHomeScreenDoorbells> doorbells)
+    {
+        var cloudMedia = adapter.GetRecentMedia(_sessionDetails.Account!, DateTime.UtcNow.AddHours(-24))?.Media ?? new List<ICloudMediaItem>();
+
+        DeviceMediaListing BuildListing(string name, string? thumbnailField)
+        {
+            var entries = new List<DeviceMediaEntry>();
+
+            if (!string.IsNullOrEmpty(thumbnailField))
+                entries.Add(new DeviceMediaEntry("current", DeviceMediaKind.Current, null, null, null, null, null));
+
+            foreach (var item in cloudMedia.Where(m => !m.Deleted && string.Equals(m.Device_Name, name, StringComparison.OrdinalIgnoreCase)))
+                entries.Add(new DeviceMediaEntry(item.Created_At.ToUniversalTime().ToString("yyyy-MM-dd_HH-mm-ss"), DeviceMediaKind.Cloud, item.Created_At, item, null, null, null));
+
+            var seenNames = new HashSet<string>();
+            for (var i = 0; i < entries.Count; i++)
+            {
+                var entry = entries[i];
+                if (!seenNames.Add(entry.Name))
+                    entries[i] = entry with { Name = $"{entry.Name}_{entry.CloudItem?.Id}" };
+            }
+
+            return new DeviceMediaListing(entries);
+        }
+
+        var cameraListings = cameras.ToDictionary(c => c.id, c => BuildListing(c.Name, c.Thumbnail));
+        var doorbellListings = doorbells.ToDictionary(d => d.Id, d => BuildListing(d.Name, d.Thumbnail));
+
+        return (cameraListings, doorbellListings);
+    }
+
     public string Help(string[] arguments)
     {
         return new string("LOGIN            Logs into Blink account (using settings file." +

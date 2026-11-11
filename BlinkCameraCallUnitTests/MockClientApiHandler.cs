@@ -17,6 +17,7 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
     public int BusyThenSucceedCallCount { get; private set; }
     public int AlwaysBusyCallCount { get; private set; }
     public int GarageDisableCallCount { get; private set; }
+    public int MediaChangedCallCount { get; private set; }
 
     // Test-only hook: lets a test cancel a token at the exact instant a POST happens, instead
     // of racing a timer. Defaults to null, so every existing test is unaffected.
@@ -151,10 +152,16 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
     public string? Get(string Url)
     {
         if (Url.StartsWith("https://rest-007.immedia-semi.com/api/v1/accounts/134166/media/changed?since="))
+        {
+            MediaChangedCallCount++;
             return MockData.CreateCloudMediaChangedResponse().Serialize();
+        }
 
         if (Url.StartsWith("https://rest-007.immedia-semi.com/api/v1/accounts/999999/media/changed?since="))
+        {
+            MediaChangedCallCount++;
             return MockData.CreateEmptyCloudMediaChangedResponse().Serialize();
+        }
 
         switch (Url)
         {

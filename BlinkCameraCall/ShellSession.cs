@@ -135,20 +135,59 @@ public class ShellSession(BlinkLibrary library)
         if (_currentNetwork is not null)
         {
             var cameras = (library.CurrentSession.Cameras ?? new List<IHomeScreenCamera>())
-                .Where(c => c.Network_Id == _currentNetwork.Id);
+                .Where(c => c.Network_Id == _currentNetwork.Id).ToList();
             var doorbells = (library.CurrentSession.Doorbells ?? new List<IHomeScreenDoorbells>())
-                .Where(d => d.Network_Id == _currentNetwork.Id);
+                .Where(d => d.Network_Id == _currentNetwork.Id).ToList();
 
-            var lines = cameras.Select(DeviceMapExtension.FormatCameraLine)
-                .Concat(doorbells.Select(DeviceMapExtension.FormatDoorbellLine))
-                .ToList();
+            if (cameras.Count == 0 && doorbells.Count == 0)
+                return "No cameras or doorbells in this hub.";
 
-            return lines.Count == 0
-                ? "No cameras or doorbells in this hub."
-                : string.Join(Environment.NewLine, lines);
+            var media = library.ListAllDeviceMedia(cameras, doorbells);
+            return string.Join(Environment.NewLine, FormatDevicesWithMedia(cameras, doorbells, media));
         }
 
-        return string.Join(Environment.NewLine, library.CurrentSession.Networks.Select(n => n.FormatNetworkLine()));
+        var allCameras = library.CurrentSession.Cameras ?? new List<IHomeScreenCamera>();
+        var allDoorbells = library.CurrentSession.Doorbells ?? new List<IHomeScreenDoorbells>();
+        var allMedia = library.ListAllDeviceMedia(allCameras, allDoorbells);
+
+        var blocks = library.CurrentSession.Networks.Select(network =>
+        {
+            var networkCameras = allCameras.Where(c => c.Network_Id == network.Id).ToList();
+            var networkDoorbells = allDoorbells.Where(d => d.Network_Id == network.Id).ToList();
+
+            var lines = new List<string> { network.FormatNetworkLine() };
+            lines.AddRange(networkCameras.Count == 0 && networkDoorbells.Count == 0
+                ? new[] { "  (no cameras or doorbells)" }
+                : FormatDevicesWithMedia(networkCameras, networkDoorbells, allMedia));
+
+            return string.Join(Environment.NewLine, lines);
+        });
+
+        return string.Join(Environment.NewLine, blocks);
+    }
+
+    private static List<string> FormatDevicesWithMedia(
+        List<IHomeScreenCamera> cameras,
+        List<IHomeScreenDoorbells> doorbells,
+        (Dictionary<long, DeviceMediaListing> Cameras, Dictionary<long, DeviceMediaListing> Doorbells) media)
+    {
+        var lines = new List<string>();
+
+        foreach (var camera in cameras)
+        {
+            lines.Add(DeviceMapExtension.FormatCameraLine(camera));
+            if (media.Cameras.TryGetValue(camera.id, out var listing))
+                lines.AddRange(listing.IndentedLines("    "));
+        }
+
+        foreach (var doorbell in doorbells)
+        {
+            lines.Add(DeviceMapExtension.FormatDoorbellLine(doorbell));
+            if (media.Doorbells.TryGetValue(doorbell.Id, out var listing))
+                lines.AddRange(listing.IndentedLines("    "));
+        }
+
+        return lines;
     }
 
     public string Trigger(TimeSpan? pollInterval = null, int maxRetries = 120)

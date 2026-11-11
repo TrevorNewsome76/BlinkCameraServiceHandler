@@ -245,10 +245,16 @@ prompt itself tracks this: it starts as `BC>` at the root, grows to
 - `CD ..` moves up one level (device → hub → root). At the root, `CD ..` is
   a no-op.
 - `CD \` (or `CD /`) jumps straight back to the root from anywhere.
-- `LS` lists whatever is "in" your current directory: hubs at the root,
-  that hub's cameras/doorbells one level down, or — inside a device — a
-  merged listing of its current thumbnail plus its recent cloud and
-  SD-card clips, each tagged `[current]`, `[cloud]`, or `[local]`.
+- `LS` lists whatever is "in" your current directory. At the root or inside
+  a hub, it also shows each camera/doorbell's current thumbnail and recent
+  cloud clips (tagged `[current]`/`[cloud]`) indented underneath its usual
+  status line — so you can see what's available to download across a whole
+  hub, or your whole account, without `cd`-ing into every device one at a
+  time. This quick view never includes SD-card (local storage) clips, since
+  those need a per-sync-module manifest request that can take a few
+  seconds; a device with nothing to show just has no indented lines under
+  it. Inside a device itself, `LS` still shows the full merged listing,
+  including local storage, each tagged `[current]`, `[cloud]`, or `[local]`.
 
 `TRIGGER` and bare `DOWNLOAD <name>` only work inside a device directory
 (`cd` into a camera or doorbell first), and `DOWNLOAD <name>` additionally
