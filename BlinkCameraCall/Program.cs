@@ -84,7 +84,7 @@ namespace BlinkCameraCall
                                     ? blinkLibrary.Login()
                                     : blinkLibrary.Login(command.Arguments));
                                 SaveCredentialsIfLoggedIn(blinkLibrary, settings);
-                                TryAutoStartWatch(blinkLibrary, alertSink);
+                                TryAutoStartWatch(blinkLibrary, settings, alertSink);
                                 break;
 
                             case "logout":
@@ -93,7 +93,7 @@ namespace BlinkCameraCall
                             case "verify":
                                 Console.WriteLine(blinkLibrary.VerifyPin(command.Arguments));
                                 SaveCredentialsIfLoggedIn(blinkLibrary, settings);
-                                TryAutoStartWatch(blinkLibrary, alertSink);
+                                TryAutoStartWatch(blinkLibrary, settings, alertSink);
                                 break;
                             case "quit":
                             case "exit":
@@ -134,10 +134,16 @@ namespace BlinkCameraCall
                                 RunArmDisarm(progressSpinner, (onProgress, ct) => shellSession.Disarm(onProgress: onProgress, cancellationToken: ct), () => shellSession.Disarm());
                                 break;
                             case "watch":
-                                Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink));
+                                Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink, settings.WatchIntervalSeconds, newSeconds => { settings.WatchIntervalSeconds = newSeconds; settings.Save($"{AppContext.BaseDirectory}"); }));
                                 break;
                             case "unwatch":
                                 Console.WriteLine(blinkLibrary.Unwatch());
+                                break;
+                            case "localwatch":
+                                Console.WriteLine(blinkLibrary.LocalWatch(command.Arguments ?? Array.Empty<string>(), alertSink, settings.LocalWatchIntervalSeconds, newSeconds => { settings.LocalWatchIntervalSeconds = newSeconds; settings.Save($"{AppContext.BaseDirectory}"); }));
+                                break;
+                            case "unlocalwatch":
+                                Console.WriteLine(blinkLibrary.Unlocalwatch());
                                 break;
                             case "download":
                                 Console.WriteLine(command.BareDownload
@@ -168,6 +174,8 @@ namespace BlinkCameraCall
                                 Console.WriteLine("DISARM                            Disarms the current system/hub/device (cd to choose the level). Press Esc to cancel.");
                                 Console.WriteLine("WATCH -s<seconds>                Watches for new doorbell/motion events in the background (default 20s).");
                                 Console.WriteLine("UNWATCH                          Stops watching for new events.");
+                                Console.WriteLine("LOCALWATCH -s<seconds>           Watches sync modules' SD-card storage for new clips in the background (default 5s).");
+                                Console.WriteLine("UNLOCALWATCH                     Stops watching local storage for new clips.");
                                 Console.WriteLine("DOWNLOAD <name>                  Downloads a media item by the name LS showed (device directory only).");
                                 Console.WriteLine("LOCALCLIPS -n<syncmodule>        Lists a sync module's SD-card manifest.");
                                 Console.WriteLine("LOCALDOWNLOAD -i<id> -n<sync>    Downloads an SD-card clip (id from LOCALCLIPS) to media/.");
@@ -197,10 +205,10 @@ namespace BlinkCameraCall
         private const string PlaceholderPassword = "PAssword";
         private const int MaxVerificationAttempts = 3;
 
-        private static void TryAutoStartWatch(BlinkLibrary blinkLibrary, Action<string> alertSink)
+        private static void TryAutoStartWatch(BlinkLibrary blinkLibrary, IBlinkSettings settings, Action<string> alertSink)
         {
             if (blinkLibrary.IsLoggedIn)
-                Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink));
+                Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink, settings.WatchIntervalSeconds, newSeconds => { settings.WatchIntervalSeconds = newSeconds; settings.Save($"{AppContext.BaseDirectory}"); }));
         }
 
         private static void RunArmDisarm(ProgressSpinner progressSpinner, Func<Action<string>, CancellationToken, string> runCancellable, Func<string> runPlain)
@@ -281,7 +289,7 @@ namespace BlinkCameraCall
             }
 
             SaveCredentialsIfLoggedIn(blinkLibrary, settings);
-            TryAutoStartWatch(blinkLibrary, alertSink);
+            TryAutoStartWatch(blinkLibrary, settings, alertSink);
         }
 
         private static void SaveCredentialsIfLoggedIn(BlinkLibrary blinkLibrary, IBlinkSettings settings)
