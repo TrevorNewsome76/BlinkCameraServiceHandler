@@ -233,6 +233,43 @@ public class UnitTest_EventWatchPolling
     }
 
     [Fact]
+    public void Test_Run_CancelledDuringRound_DoesNotRetuneOrPersistAfterCancellation()
+    {
+        // Proves a round that finishes AFTER cancellation was already requested mid-round does
+        // NOT fire either retune callback, even though the round itself was genuinely slower than
+        // the current interval (so it WOULD have retuned had cancellation not already landed).
+        // Mirrors LocalStorageWatchPolling.Run's existing
+        // `if (cancelledMidRound || token.IsCancellationRequested) break;` guard before its own
+        // retune call — EventWatchPolling.Run lacked the equivalent guard before this fix, so a
+        // just-cancelled round's trailing retune could race and overwrite an explicit `-s<secs>`
+        // the user set a moment later via a fresh WATCH.
+        //assign
+        Shelf.Clear();
+        var cts = new CancellationTokenSource();
+        Shelf.ShelveInstance<IApiTransactions>(new FakeApiTransactions(() =>
+        {
+            cts.Cancel();
+            Thread.Sleep(20);
+            return NoItems();
+        }));
+        var interval = new AdaptivePollInterval(TimeSpan.FromMilliseconds(1));
+        var tooShortCalled = false;
+        var persistedCalled = false;
+
+        //act
+        EventWatchPolling.Run(
+            DummyAdapter, DummyAccount, item => { }, ex => { }, cts.Token,
+            interval,
+            (_, _, _) => tooShortCalled = true,
+            _ => persistedCalled = true,
+            maxIterations: 5);
+
+        //assert
+        tooShortCalled.Should().BeFalse();
+        persistedCalled.Should().BeFalse();
+    }
+
+    [Fact]
     public void Test_Run_CancelledDuringPostRoundWait_StopsPromptlyRatherThanWaitingFullInterval()
     {
         // Proves cancellation requested *during* the post-round wait is honored immediately,

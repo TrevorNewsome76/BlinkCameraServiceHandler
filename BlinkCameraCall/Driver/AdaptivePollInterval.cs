@@ -17,7 +17,11 @@ public sealed class AdaptivePollInterval(TimeSpan initial)
         if (totalRoundElapsed <= Current)
             return null;
 
-        Current = slowestItemElapsed + TimeSpan.FromSeconds(1);
-        return Current;
+        var candidate = slowestItemElapsed + TimeSpan.FromSeconds(1);
+        if (candidate == Current)
+            return null;
+
+        Current = candidate;
+        return candidate;
     }
 }

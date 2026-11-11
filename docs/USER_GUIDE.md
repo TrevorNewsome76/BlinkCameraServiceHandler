@@ -433,14 +433,18 @@ two commands are the most likely in this release to need a fix after
 real-world use — see [DEVELOPER.md](DEVELOPER.md) if that happens.
 
 Both `WATCH` and `LOCALWATCH` (below) share the same self-tuning polling
-interval: if a round of checking ever takes longer than the currently
-configured interval, the interval grows automatically to fit — just
-enough to cover the slowest thing that round checked, plus a one-second
-margin — and never shrinks back down again afterwards, even if later
-rounds get fast again. Each watcher keeps its own interval, independent
-of the other. Whenever it grows, the new value is saved to `config.json`
-immediately, so it's still in effect the next time you start the
-program, not just for the rest of this session.
+interval: the interval adjusts to the slowest check observed in a round,
+plus a one-second buffer — it can move up or down depending on what was
+slowest, but you'll only see it reported once per actual change, never
+repeatedly for the same value. Each watcher keeps its own interval,
+independent of the other. Whenever it changes, the new value is saved to
+`config.json` immediately, so it's still in effect the next time you
+start the program, not just for the rest of this session.
+
+For `LOCALWATCH` specifically, a sync module's very first successful
+check establishes a baseline and never alerts on clips already present
+on its SD card — only clips that appear on a later check trigger an
+alert.
 
 ## Watching for new events (`WATCH` / `UNWATCH`)
 
@@ -518,6 +522,7 @@ BC>
 | Message | What it means |
 |---|---|
 | `Not currently logged into Blink service.` | Log in first. |
+| `Run MAP or GET first to load your devices.` | You're logged in, but haven't fetched your device list yet this session. |
 | `No sync modules with active local storage to watch.` | None of your sync modules have an active SD card. |
 | `Watching local storage for new clips every <seconds>s across <n> sync module(s). Use UNLOCALWATCH to stop.` | Success. |
 | `Already watching local storage. Use UNLOCALWATCH to stop.` | `LOCALWATCH` was run while one was already active. |

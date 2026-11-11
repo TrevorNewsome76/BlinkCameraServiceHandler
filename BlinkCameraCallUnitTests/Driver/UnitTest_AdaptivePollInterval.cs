@@ -50,4 +50,17 @@ public class UnitTest_AdaptivePollInterval
 
         result.Should().Be(TimeSpan.FromSeconds(26));
     }
+
+    [Fact]
+    public void Test_ReportRound_RepeatedCallWithSameComputedCandidate_ReturnsNullAfterFirstRetune()
+    {
+        var interval = new AdaptivePollInterval(TimeSpan.FromSeconds(5));
+
+        var first = interval.ReportRound(TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(3));
+        var second = interval.ReportRound(TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(3));
+
+        first.Should().Be(TimeSpan.FromSeconds(4));
+        second.Should().BeNull();
+        interval.Current.Should().Be(TimeSpan.FromSeconds(4));
+    }
 }

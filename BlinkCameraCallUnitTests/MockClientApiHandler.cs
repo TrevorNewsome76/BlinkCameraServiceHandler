@@ -188,6 +188,8 @@ internal class MockHttpClientApiHandler : IApiMethods, IDisposable
                     : MockData.CreateValidHomeScreenResponse()).Serialize();
             case "https://rest-007.immedia-semi.com/api/v3/accounts/999999/homescreen":
                 return MockData.CreateHomeScreenResponseWithEmptyThumbnail().Serialize();
+            case "https://rest-007.immedia-semi.com/api/v3/accounts/777777/homescreen":
+                return MockData.CreateHomeScreenResponseWithNoActiveLocalStorage().Serialize();
             case "https://rest-007.immedia-semi.com/network/263178/command/500":
                 return "{\"id\":500,\"network_id\":263178,\"complete\":true,\"status_code\":908}";
             case "https://rest-007.immedia-semi.com/network/263178/command/501":

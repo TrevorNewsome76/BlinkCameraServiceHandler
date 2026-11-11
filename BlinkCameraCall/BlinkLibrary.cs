@@ -564,7 +564,7 @@ public class BlinkLibrary(IAdapter adapter)
             cts.Token,
             interval,
             (total, slowest, newInterval) => onAlert($"[WATCH] Checking for new events took {total.TotalSeconds:0.0}s — longer than the current interval, extending it to {newInterval.TotalSeconds:0.0}s."),
-            newInterval => onIntervalPersisted?.Invoke((int)newInterval.TotalSeconds)));
+            newInterval => onIntervalPersisted?.Invoke((int)Math.Ceiling(newInterval.TotalSeconds))));
 
         return $"Watching for new events every {startingSeconds}s. Use UNWATCH to stop.";
     }
@@ -604,7 +604,10 @@ public class BlinkLibrary(IAdapter adapter)
         if (_localWatchCts is not null)
             return "Already watching local storage. Use UNLOCALWATCH to stop.";
 
-        var syncModules = (_sessionDetails.SyncModules ?? new List<IHomeScreenSyncModule>())
+        if (_sessionDetails.SyncModules is null)
+            return "Run MAP or GET first to load your devices.";
+
+        var syncModules = _sessionDetails.SyncModules
             .Where(s => s.Local_Storage_Status == "active")
             .ToList();
 
@@ -635,7 +638,7 @@ public class BlinkLibrary(IAdapter adapter)
             (clip, syncModuleName) => onAlert($"[LOCAL ALERT] New clip: {clip.Camera_Name} on '{syncModuleName}' at {clip.Created_At:yyyy-MM-dd HH:mm:ss} UTC (id {clip.Id})"),
             (ex, syncModuleName) => onAlert($"[LOCALWATCH] Error checking '{syncModuleName}': {ex.Message}"),
             (total, slowest, newInterval) => onAlert($"[LOCALWATCH] Checking local storage took {total.TotalSeconds:0.0}s across {syncModules.Count} sync module(s) (slowest: {slowest.TotalSeconds:0.0}s) — longer than the current interval, extending it to {newInterval.TotalSeconds:0.0}s."),
-            newInterval => onIntervalPersisted?.Invoke((int)newInterval.TotalSeconds),
+            newInterval => onIntervalPersisted?.Invoke((int)Math.Ceiling(newInterval.TotalSeconds)),
             interval,
             cts.Token));
 

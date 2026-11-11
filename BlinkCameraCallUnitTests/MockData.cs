@@ -87,6 +87,17 @@ public static class MockData
         Message = "Login successful",
     };
 
+    public static OAuthLoginResult OAuthLoginNoActiveLocalStorageResult() => new()
+    {
+        Success = true,
+        AccessToken = "BU8fOjaF4E5POf4WTRm5wA",
+        RefreshToken = "mock-refresh-token",
+        Tier = "007",
+        AccountId = 777777,
+        ClientId = 1486061,
+        Message = "Login successful",
+    };
+
     public static OAuthLoginResult OAuthLoginTwoFactorRequiredResult() => new()
     {
         Success = false,
@@ -601,6 +612,25 @@ public static class MockData
                 new { Id = 504L, Name = "Download Timeout Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = true, Local_Storage_Compatible = true, Local_Storage_Status = "active" },
                 new { Id = 505L, Name = "Rejected Manifest Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = true, Local_Storage_Compatible = true, Local_Storage_Status = "active" },
                 new { Id = 506L, Name = "Reject Prepare Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = true, Local_Storage_Compatible = true, Local_Storage_Status = "active" },
+            }),
+        });
+
+    // An account whose device list IS loaded (Sync_Modules is non-null), but every sync module's
+    // local storage is non-active — the genuine "nothing to watch" case, as distinct from the
+    // "device list was never loaded at all" case (Sync_Modules null).
+    public static IGetHomeScreenResponse CreateHomeScreenResponseWithNoActiveLocalStorage() =>
+        Duck.Implement<IGetHomeScreenResponse>(new
+        {
+            Networks = Duck.Implement<List<IHomeScreenNetwork>>(new[]
+            {
+                new { Id = 1L, Name = "Solo Network", Armed = false },
+            }),
+            Cameras = Duck.Implement<List<IHomeScreenCamera>>(Array.Empty<object>()),
+            Doorbells = Duck.Implement<List<IHomeScreenDoorbells>>(Array.Empty<object>()),
+            Sync_Modules = Duck.Implement<List<IHomeScreenSyncModule>>(new[]
+            {
+                new { Id = 800L, Name = "Unavailable Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = false, Local_Storage_Compatible = true, Local_Storage_Status = "unavailable" },
+                new { Id = 801L, Name = "Disabled Sync", Network_Id = "1", Status = "online", Fw_Version = "1.0", Wifi_Strength = 5, Local_Storage_Enabled = false, Local_Storage_Compatible = false, Local_Storage_Status = "unavailable" },
             }),
         });
 }

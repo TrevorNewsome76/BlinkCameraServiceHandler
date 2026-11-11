@@ -1968,13 +1968,39 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Test_LocalWatchFailedNoActiveLocalStorage()
+    public void Test_LocalWatchFailedDeviceListNeverLoaded()
     {
+        // Login/auto-login alone never populates SyncModules — only MAP/GET/TRIGGER/an
+        // arm-disarm refresh does. LOCALWATCH immediately after login (no MAP/GET) must say to
+        // run MAP or GET first, matching LocalClips' identical guard, rather than claiming there
+        // are no active sync modules (which hasn't actually been determined yet).
         //assign
         var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
         var loginArguments = new[] { "utest@email.com", "pPAssword" };
         var blinkLib = new BlinkLibrary(mockAdapter);
         blinkLib.Login(loginArguments);
+        var expected = "Run MAP or GET first to load your devices.";
+
+        //act
+        var actualResult = blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        var unlocalwatchResult = blinkLib.Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+        unlocalwatchResult.Should().BeEquivalentTo("Not currently watching local storage.");
+    }
+
+    [Fact]
+    public void Test_LocalWatchFailedNoActiveLocalStorage()
+    {
+        // Genuine "nothing to watch" case: the device list WAS loaded (Map() ran), but every
+        // sync module on the account has non-active local storage.
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoActiveLocalStorageSettings());
+        var loginArguments = new[] { "unoactivelocal@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
         var expected = "No sync modules with active local storage to watch.";
 
         //act

@@ -43,6 +43,9 @@ public static class EventWatchPolling
             }
             stopwatch.Stop();
 
+            if (token.IsCancellationRequested)
+                break;
+
             var elapsed = stopwatch.Elapsed;
             var newInterval = interval.ReportRound(elapsed, elapsed);
             if (newInterval.HasValue)
@@ -50,9 +53,6 @@ public static class EventWatchPolling
                 onIntervalTooShort?.Invoke(elapsed, elapsed, newInterval.Value);
                 onIntervalPersisted?.Invoke(newInterval.Value);
             }
-
-            if (token.IsCancellationRequested)
-                break;
 
             if (token.WaitHandle.WaitOne(interval.Current))
                 break;

@@ -80,18 +80,26 @@ public class UnitTest_LocalStorageWatchPolling
     [Fact]
     public void Test_Run_MultipleModules_DetectsNewClipsOnEachInListOrder()
     {
+        // Round 1 establishes each module's baseline (Fix 2: a module's first successful check
+        // never alerts on clips already present) — clipA/clipB are pre-existing and must NOT be
+        // reported. Round 2 introduces one additional, genuinely new clip per module; those are
+        // the ones that must be reported, in list order.
         //assign
         Shelf.Clear();
         var moduleA = SyncModule(1, "Garage");
         var moduleB = SyncModule(2, "Pergoda");
         var clipA = Clip(101, "Garage");
         var clipB = Clip(201, "Pergoda");
+        var newClipA = Clip(102, "Garage");
+        var newClipB = Clip(202, "Pergoda");
+        var callCountA = 0;
+        var callCountB = 0;
         Shelf.ShelveInstance<IApiTransactions>(new FakeApiTransactions(
             new Dictionary<long, Func<IManifestRequestResponse?>>(),
             new Dictionary<long, Func<CancellationToken, ILocalStorageManifestResult?>>
             {
-                [1] = _ => Manifest(clipA),
-                [2] = _ => Manifest(clipB),
+                [1] = _ => ++callCountA == 1 ? Manifest(clipA) : Manifest(clipA, newClipA),
+                [2] = _ => ++callCountB == 1 ? Manifest(clipB) : Manifest(clipB, newClipB),
             }));
         var reported = new List<(long ClipId, string ModuleName)>();
 
@@ -105,24 +113,28 @@ public class UnitTest_LocalStorageWatchPolling
             NoOpOnIntervalPersisted,
             new AdaptivePollInterval(TimeSpan.Zero),
             CancellationToken.None,
-            maxIterations: 1);
+            maxIterations: 2);
 
         //assert
-        reported.Should().Equal((101L, "Garage"), (201L, "Pergoda"));
+        reported.Should().Equal((102L, "Garage"), (202L, "Pergoda"));
     }
 
     [Fact]
     public void Test_Run_RepeatedRound_DoesNotReportSameClipTwice()
     {
+        // Round 1 is an empty baseline round (nothing to seed). The clip first appears on round 2
+        // (genuinely new — reported once). Round 3 re-returns the same clip to prove a clip, once
+        // reported, isn't reported again on a later round either.
         //assign
         Shelf.Clear();
         var module = SyncModule(1, "Garage");
         var clip = Clip(101, "Garage");
+        var callCount = 0;
         Shelf.ShelveInstance<IApiTransactions>(new FakeApiTransactions(
             new Dictionary<long, Func<IManifestRequestResponse?>>(),
             new Dictionary<long, Func<CancellationToken, ILocalStorageManifestResult?>>
             {
-                [1] = _ => Manifest(clip),
+                [1] = _ => ++callCount == 1 ? Manifest() : Manifest(clip),
             }));
         var reported = new List<long>();
 
@@ -136,27 +148,40 @@ public class UnitTest_LocalStorageWatchPolling
             NoOpOnIntervalPersisted,
             new AdaptivePollInterval(TimeSpan.Zero),
             CancellationToken.None,
-            maxIterations: 2);
+            maxIterations: 3);
 
         //assert
         reported.Should().Equal(101L);
     }
 
     [Fact]
-    public void Test_Run_SameClipIdOnDifferentModules_BothReported()
+    public void Test_Run_SameClipIdOnDifferentModules_TrackedIndependentlyPerModule()
     {
+        // Proves the per-module seen-clip HashSets are tracked independently, in a way that
+        // isn't just an artifact of the new baseline-seeding behavior (Fix 2). Round 1 establishes
+        // each module's baseline with the SAME pre-existing clip id (999) on both — under the
+        // fix, that correctly never fires for either module. Round 2 re-returns the identical
+        // manifests to prove that silence is stable, not a one-off. Round 3 then introduces a
+        // brand-new clip id (888) that's also shared across both modules; both modules must
+        // independently report it. If the two modules' seen-sets were ever accidentally shared,
+        // the second module's "888" would be wrongly suppressed as already-seen the instant the
+        // first module added it.
         //assign
         Shelf.Clear();
         var moduleA = SyncModule(1, "Garage");
         var moduleB = SyncModule(2, "Pergoda");
-        var clipOnA = Clip(999, "Garage");
-        var clipOnB = Clip(999, "Pergoda");
+        var baselineClipA = Clip(999, "Garage");
+        var baselineClipB = Clip(999, "Pergoda");
+        var newSharedClipA = Clip(888, "Garage");
+        var newSharedClipB = Clip(888, "Pergoda");
+        var callCountA = 0;
+        var callCountB = 0;
         Shelf.ShelveInstance<IApiTransactions>(new FakeApiTransactions(
             new Dictionary<long, Func<IManifestRequestResponse?>>(),
             new Dictionary<long, Func<CancellationToken, ILocalStorageManifestResult?>>
             {
-                [1] = _ => Manifest(clipOnA),
-                [2] = _ => Manifest(clipOnB),
+                [1] = _ => ++callCountA < 3 ? Manifest(baselineClipA) : Manifest(baselineClipA, newSharedClipA),
+                [2] = _ => ++callCountB < 3 ? Manifest(baselineClipB) : Manifest(baselineClipB, newSharedClipB),
             }));
         var reported = new List<(long ClipId, string ModuleName)>();
 
@@ -170,21 +195,27 @@ public class UnitTest_LocalStorageWatchPolling
             NoOpOnIntervalPersisted,
             new AdaptivePollInterval(TimeSpan.Zero),
             CancellationToken.None,
-            maxIterations: 1);
+            maxIterations: 3);
 
         //assert
-        reported.Should().Equal((999L, "Garage"), (999L, "Pergoda"));
+        reported.Should().Equal((888L, "Garage"), (888L, "Pergoda"));
     }
 
     [Fact]
     public void Test_Run_OneModuleThrows_StillChecksTheRemainingModulesInThatRound()
     {
+        // Module "Second" throws on every round (proving modules A and C still get checked every
+        // round regardless, across 2 rounds this time). Module C's round-1 clip (301) establishes
+        // its baseline (Fix 2: never alerted on); round 2 introduces a genuinely new clip (302) on
+        // module C, proving it's still being correctly checked and tracked after the fix.
         //assign
         Shelf.Clear();
         var moduleA = SyncModule(1, "First");
         var moduleB = SyncModule(2, "Second");
         var moduleC = SyncModule(3, "Third");
         var clipC = Clip(301, "Third");
+        var newClipC = Clip(302, "Third");
+        var callCountC = 0;
         Shelf.ShelveInstance<IApiTransactions>(new FakeApiTransactions(
             new Dictionary<long, Func<IManifestRequestResponse?>>
             {
@@ -193,7 +224,7 @@ public class UnitTest_LocalStorageWatchPolling
             new Dictionary<long, Func<CancellationToken, ILocalStorageManifestResult?>>
             {
                 [1] = _ => Manifest(),
-                [3] = _ => Manifest(clipC),
+                [3] = _ => ++callCountC == 1 ? Manifest(clipC) : Manifest(clipC, newClipC),
             }));
         var reported = new List<(long ClipId, string ModuleName)>();
         var errors = new List<(string Message, string ModuleName)>();
@@ -208,11 +239,11 @@ public class UnitTest_LocalStorageWatchPolling
             NoOpOnIntervalPersisted,
             new AdaptivePollInterval(TimeSpan.Zero),
             CancellationToken.None,
-            maxIterations: 1);
+            maxIterations: 2);
 
         //assert
-        errors.Should().Equal(("boom", "Second"));
-        reported.Should().Equal((301L, "Third"));
+        errors.Should().Equal(("boom", "Second"), ("boom", "Second"));
+        reported.Should().Equal((302L, "Third"));
     }
 
     [Fact]
@@ -311,6 +342,56 @@ public class UnitTest_LocalStorageWatchPolling
         tooShortCalls[0].NewInterval.Should().Be(tooShortCalls[0].Slowest + TimeSpan.FromSeconds(1));
         persistedCalls[0].Should().Be(tooShortCalls[0].NewInterval);
         interval.Current.Should().Be(tooShortCalls[0].NewInterval);
+    }
+
+    [Fact]
+    public void Test_Run_MultiModuleRetuneRepeatsAcrossRounds_OnlyReportsOnce()
+    {
+        // End-to-end proof (through the real Run() caller, not just AdaptivePollInterval directly)
+        // that once a round retunes the interval, later rounds whose own check time stays small
+        // relative to the now-larger interval correctly stay silent across repeated iterations —
+        // i.e. Run() doesn't re-invoke the retune callbacks merely because maxIterations > 1.
+        //
+        // Note: this does NOT (and provably cannot, via real Stopwatch-measured delays) exercise
+        // Fix 1's new "candidate == Current" branch specifically — empirically verified: two
+        // independent ~1.1s module sleeps measured a few ms apart every round (observed jitter
+        // ~10-15ms), so the recomputed candidate never ties the prior one exactly, even with the
+        // fix applied, firing a new (genuinely different, correctly-not-suppressed) value every
+        // round instead. That exact branch is covered deterministically by
+        // Test_ReportRound_RepeatedCallWithSameComputedCandidate_ReturnsNullAfterFirstRetune in
+        // UnitTest_AdaptivePollInterval, which feeds ReportRound identical hardcoded values with
+        // no timing involved. This test instead covers the adjacent, previously-untested
+        // integration gap: multiple rounds, multiple modules, one retune, through Run() itself.
+        //assign
+        Shelf.Clear();
+        var moduleA = SyncModule(1, "First");
+        var moduleB = SyncModule(2, "Second");
+        Shelf.ShelveInstance<IApiTransactions>(new FakeApiTransactions(
+            new Dictionary<long, Func<IManifestRequestResponse?>>(),
+            new Dictionary<long, Func<CancellationToken, ILocalStorageManifestResult?>>
+            {
+                [1] = _ => { Thread.Sleep(3); return Manifest(); },
+                [2] = _ => { Thread.Sleep(3); return Manifest(); },
+            }));
+        var interval = new AdaptivePollInterval(TimeSpan.FromMilliseconds(1));
+        var tooShortCalls = new List<TimeSpan>();
+        var persistedCalls = new List<TimeSpan>();
+
+        //act
+        LocalStorageWatchPolling.Run(
+            DummyAdapter, DummyAccount,
+            new List<IHomeScreenSyncModule> { moduleA, moduleB },
+            (clip, name) => { },
+            (ex, name) => { },
+            (total, slowest, newInterval) => tooShortCalls.Add(newInterval),
+            newInterval => persistedCalls.Add(newInterval),
+            interval,
+            CancellationToken.None,
+            maxIterations: 3);
+
+        //assert
+        tooShortCalls.Should().HaveCount(1);
+        persistedCalls.Should().HaveCount(1);
     }
 
     [Fact]

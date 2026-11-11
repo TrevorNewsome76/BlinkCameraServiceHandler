@@ -44,4 +44,16 @@ public class MockSettings
         WatchIntervalSeconds = 20,
         LocalWatchIntervalSeconds = 5,
     });
+
+    // An account whose home screen lists sync modules, but none with active local storage —
+    // distinct from an account that simply never ran MAP/GET (SyncModules null).
+    public static IBlinkSettings CreateNoActiveLocalStorageSettings() => Duck.Implement<IBlinkSettings>(new
+    {
+        BaseUrl = "https://rest-prod.immedia-semi.com",
+        Email = "noactivelocal@email.com",
+        Password = "PAssword",
+        HardwareId = string.Empty,
+        WatchIntervalSeconds = 20,
+        LocalWatchIntervalSeconds = 5,
+    });
 }

@@ -47,12 +47,15 @@ public static class LocalStorageWatchPolling
                     var manifestResult = adapter.GetLocalStorageManifest(account, networkId, syncModule.Id, requestResult!.Id, cancellationToken: token);
 
                     var clips = manifestResult?.Clips ?? new List<ILocalStorageClip>();
-                    if (!seenClipIdsBySyncModule.TryGetValue(syncModule.Id, out var seenClipIds))
+                    var isFirstSuccessfulCheck = !seenClipIdsBySyncModule.TryGetValue(syncModule.Id, out var seenClipIds);
+                    if (isFirstSuccessfulCheck)
                         seenClipIdsBySyncModule[syncModule.Id] = seenClipIds = new HashSet<long>();
 
                     foreach (var clip in clips)
                     {
-                        if (seenClipIds.Add(clip.Id))
+                        if (isFirstSuccessfulCheck)
+                            seenClipIds!.Add(clip.Id);
+                        else if (seenClipIds!.Add(clip.Id))
                             onNewClip(clip, syncModule.Name);
                     }
                 }

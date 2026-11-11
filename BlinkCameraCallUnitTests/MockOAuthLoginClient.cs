@@ -20,6 +20,9 @@ internal class MockOAuthLoginClient : IOAuthLogin
         if (email == MockSettings.CreateNoThumbnailSettings().Email && password == MockSettings.CreateNoThumbnailSettings().Password)
             return MockData.OAuthLoginNoThumbnailResult();
 
+        if (email == MockSettings.CreateNoActiveLocalStorageSettings().Email && password == MockSettings.CreateNoActiveLocalStorageSettings().Password)
+            return MockData.OAuthLoginNoActiveLocalStorageResult();
+
         return MockData.OAuthLoginFailedResult();
     }
 

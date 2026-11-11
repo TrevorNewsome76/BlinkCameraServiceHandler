@@ -802,12 +802,25 @@ and the adaptive, persisted polling interval both watchers now share.
   and `LocalStorageWatchPolling` (whose round is a whole pass over every
   sync module, so the two values can differ) each do their own timing
   with their own `Stopwatch` and just report the results. If a round was
-  slower than `Current`, the new interval is `slowestItemElapsed +
+  slower than `Current`, the candidate interval is `slowestItemElapsed +
   TimeSpan.FromSeconds(1)` — sized to the slowest *item* within the round,
-  not the round's full total, plus a one-second margin — and `Current`
-  only ever grows, never shrinks back down later even if things speed up
-  again; that's a deliberate scope decision (see the design spec), not an
-  oversight.
+  not the round's full total, plus a one-second margin. `Current` moves to
+  whatever that candidate is, which **can be smaller than the previous
+  value** if the slowest item got faster since the last retune — it isn't
+  monotonically growing, and earlier docs/comments implying otherwise were
+  simply wrong. What `ReportRound` *does* guarantee is narrower: if the
+  freshly-computed candidate is exactly equal to the already-current value
+  (`candidate == Current`), it returns `null` instead of reporting/persisting
+  a no-op "retune" — this matters because `totalRoundElapsed` and
+  `slowestItemElapsed` are different signals for `LocalStorageWatchPolling`
+  (sum vs. max across sync modules), so the round-level trigger condition
+  (`totalRoundElapsed > Current`) can keep firing round after round even
+  once the slowest-item-derived candidate has stopped changing — without
+  this check, that repeatedly re-reports (and re-persists to `config.json`,
+  and re-beeps) the identical value forever. `WATCH`'s own round is always a
+  single item, so `totalRoundElapsed == slowestItemElapsed` there and this
+  situation can't arise for it in practice — the check is a no-op safety net
+  for `WATCH`, but load-bearing for `LOCALWATCH`.
 - **`ManifestPolling.WaitForManifestReady` (`BlinkCameraCall/Driver/ManifestPolling.cs`)
   gained a trailing, optional `CancellationToken cancellationToken =
   default` parameter, checked both before each `Get` call and before the

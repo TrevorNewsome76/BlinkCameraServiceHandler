@@ -10,6 +10,7 @@ namespace BlinkCameraCall
 {
     internal class Program
     {
+        private static readonly object SettingsSaveLock = new();
 
         static void Main()
         {
@@ -134,13 +135,41 @@ namespace BlinkCameraCall
                                 RunArmDisarm(progressSpinner, (onProgress, ct) => shellSession.Disarm(onProgress: onProgress, cancellationToken: ct), () => shellSession.Disarm());
                                 break;
                             case "watch":
-                                Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink, settings.WatchIntervalSeconds, newSeconds => { settings.WatchIntervalSeconds = newSeconds; settings.Save($"{AppContext.BaseDirectory}"); }));
+                                Console.WriteLine(blinkLibrary.Watch(command.Arguments ?? Array.Empty<string>(), alertSink, settings.WatchIntervalSeconds, newSeconds =>
+                                {
+                                    try
+                                    {
+                                        lock (SettingsSaveLock)
+                                        {
+                                            settings.WatchIntervalSeconds = newSeconds;
+                                            settings.Save($"{AppContext.BaseDirectory}");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        alertSink($"[WATCH] Could not save the new interval: {ex.Message}");
+                                    }
+                                }));
                                 break;
                             case "unwatch":
                                 Console.WriteLine(blinkLibrary.Unwatch());
                                 break;
                             case "localwatch":
-                                Console.WriteLine(blinkLibrary.LocalWatch(command.Arguments ?? Array.Empty<string>(), alertSink, settings.LocalWatchIntervalSeconds, newSeconds => { settings.LocalWatchIntervalSeconds = newSeconds; settings.Save($"{AppContext.BaseDirectory}"); }));
+                                Console.WriteLine(blinkLibrary.LocalWatch(command.Arguments ?? Array.Empty<string>(), alertSink, settings.LocalWatchIntervalSeconds, newSeconds =>
+                                {
+                                    try
+                                    {
+                                        lock (SettingsSaveLock)
+                                        {
+                                            settings.LocalWatchIntervalSeconds = newSeconds;
+                                            settings.Save($"{AppContext.BaseDirectory}");
+                                        }
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        alertSink($"[LOCALWATCH] Could not save the new interval: {ex.Message}");
+                                    }
+                                }));
                                 break;
                             case "unlocalwatch":
                                 Console.WriteLine(blinkLibrary.Unlocalwatch());
@@ -208,7 +237,21 @@ namespace BlinkCameraCall
         private static void TryAutoStartWatch(BlinkLibrary blinkLibrary, IBlinkSettings settings, Action<string> alertSink)
         {
             if (blinkLibrary.IsLoggedIn)
-                Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink, settings.WatchIntervalSeconds, newSeconds => { settings.WatchIntervalSeconds = newSeconds; settings.Save($"{AppContext.BaseDirectory}"); }));
+                Console.WriteLine(blinkLibrary.Watch(Array.Empty<string>(), alertSink, settings.WatchIntervalSeconds, newSeconds =>
+                {
+                    try
+                    {
+                        lock (SettingsSaveLock)
+                        {
+                            settings.WatchIntervalSeconds = newSeconds;
+                            settings.Save($"{AppContext.BaseDirectory}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        alertSink($"[WATCH] Could not save the new interval: {ex.Message}");
+                    }
+                }));
         }
 
         private static void RunArmDisarm(ProgressSpinner progressSpinner, Func<Action<string>, CancellationToken, string> runCancellable, Func<string> runPlain)
