@@ -779,6 +779,107 @@ cancellation/streaming support layered on top.
   lock-and-redraw coordination `ShellLineEditor` has, for a much smaller
   window of exposure.
 
+### 7.11 Local-storage watching (`LOCALWATCH`/`UNLOCALWATCH`) and adaptive, persisted polling intervals
+
+`WATCH` only ever sees events that reach Blink's cloud; a camera/doorbell
+whose sync module is local-storage-only never uploads anything, so it
+never triggered a `WATCH` alert. This subsection documents the new
+`LOCALWATCH`/`UNLOCALWATCH` background watcher that closes that gap by
+polling local SD-card manifests the same way `LOCALCLIPS` already does,
+and the adaptive, persisted polling interval both watchers now share.
+
+- **`AdaptivePollInterval` (`BlinkCameraCall/Driver/AdaptivePollInterval.cs`)
+  is a separate, tiny, pure class — not duplicated inline in each
+  watcher — specifically so `WATCH` and `LOCALWATCH` can never drift
+  apart on the one piece of math that decides when to grow the interval.**
+  Its only method, `ReportRound(TimeSpan totalRoundElapsed, TimeSpan
+  slowestItemElapsed)`, takes two already-measured durations and nothing
+  else — it has no `Stopwatch`, no knowledge of what a "round" actually
+  does, and no side effects beyond updating its own `Current` property.
+  That statelessness-of-behavior is what makes it trivially shareable:
+  `EventWatchPolling` (whose round is always exactly one cloud check, so
+  `totalRoundElapsed` and `slowestItemElapsed` are always the same value)
+  and `LocalStorageWatchPolling` (whose round is a whole pass over every
+  sync module, so the two values can differ) each do their own timing
+  with their own `Stopwatch` and just report the results. If a round was
+  slower than `Current`, the new interval is `slowestItemElapsed +
+  TimeSpan.FromSeconds(1)` — sized to the slowest *item* within the round,
+  not the round's full total, plus a one-second margin — and `Current`
+  only ever grows, never shrinks back down later even if things speed up
+  again; that's a deliberate scope decision (see the design spec), not an
+  oversight.
+- **`ManifestPolling.WaitForManifestReady` (`BlinkCameraCall/Driver/ManifestPolling.cs`)
+  gained a trailing, optional `CancellationToken cancellationToken =
+  default` parameter, checked both before each `Get` call and before the
+  wait between attempts** — the same cancellable-wait pattern already
+  established for `TriggerSnapshot`'s busy-retry backoff (§7.10): the
+  token is threaded straight through
+  `IApiTransactions`/`BlinkApiTransactions.SystemGetLocalStorageManifest`
+  and `AdapterExtension.GetLocalStorageManifest` as one more trailing
+  optional parameter at each layer, so every pre-existing call site
+  (including every test, and `LocalClips`/`LocalDownload`'s own calls,
+  which simply never pass it) keeps compiling and behaving identically.
+  Only this *get*/poll path needs a token at all — `RequestLocalStorageManifest`
+  (`SystemRequestLocalStorageManifest`) is a single, fast POST with no
+  wait loop inside it, nothing to interrupt mid-call, so there's nothing
+  for a token to do there; it was left untouched, consistent with the
+  existing ARM/DISARM precedent of only adding cancellation where there's
+  an actual wait to cut short.
+- **`LocalStorageWatchPolling.Run` (`BlinkCameraCall/Driver/LocalStorageWatchPolling.cs`)
+  tracks seen clip ids per sync module, in a `Dictionary<long,
+  HashSet<long>>` keyed by `syncModule.Id`**, because clip ids are only
+  unique within one sync module's own manifest — the same numeric id on
+  two different sync modules identifies two unrelated clips, so a single
+  shared `HashSet` would have under-reported new clips on whichever
+  module wasn't checked first. Within a round, each sync module is
+  checked **in list order, one at a time** (never in parallel, a
+  deliberate design choice), wrapped in its own `try`/`catch`: a plain
+  `catch (Exception ex)` reports that module's failure via `onError(ex,
+  syncModule.Name)` and the loop moves on to the next module in the same
+  round, exactly like `ArmOrDisarmNetwork`'s "one bad item never stops the
+  rest" behavior (§7.9/§7.10) — a sync module that's offline or slow this
+  round doesn't stop any other module from being checked. `OperationCanceledException`
+  is caught and rethrown *ahead of* that generic `catch`, for the same
+  reason it needed its own arm in `ArmOrDisarmNetwork`: letting a real
+  cancel fall through to the generic handler would report it as an
+  ordinary per-module failure and carry on to the next module instead of
+  actually stopping. This produces **two distinct cancellation behaviors**
+  in the same loop: a cancel that lands *while a module's manifest request
+  is in flight* propagates immediately out of the `foreach` and skips the
+  rest of that round entirely, including its call to `interval.ReportRound`
+  (a partial round's timing isn't meaningful, so it's never reported or
+  allowed to retune the interval); a cancel that lands *during the sleep
+  between rounds* is the ordinary non-throwing cancellable wait
+  (`token.WaitHandle.WaitOne(interval.Current)` returning `true`) already
+  used elsewhere, which just ends the loop without an exception at all.
+  The `foreach` itself also checks `token.IsCancellationRequested` before
+  starting each sync module (mirroring `ArmOrDisarmNetwork`'s per-item
+  checks), so a cancel between two modules' checks is caught there too,
+  before ever calling `RequestLocalStorageManifest` for the next one.
+- **`LOCALWATCH` is not auto-started on login, unlike `WATCH`.** `Program.cs`'s
+  `TryAutoStartWatch` — called from `AttemptAutoLogin` and after a
+  successful `login`/`verify` — only ever calls `blinkLibrary.Watch(...)`;
+  there is no equivalent auto-start call for `LocalWatch`, so it only ever
+  runs when the `localwatch` command is typed explicitly. This matches the
+  agreed design rather than an oversight: `WATCH` is cheap and universally
+  useful the moment you're logged in, while `LOCALWATCH` only matters for
+  accounts with sync modules that actually have active local storage, and
+  starting a second background poller unconditionally on every login
+  (one that has to walk every sync module every round, each a slower
+  manifest-request-then-poll round-trip rather than one cloud call) was
+  judged worth keeping as a deliberate, explicit opt-in instead.
+- **`BlinkLibrary.LocalWatch`/`Unlocalwatch`/`_localWatchCts` mirror
+  `Watch`/`Unwatch`/`_watchCts` exactly**, down to the same guard clauses
+  (not logged in; already watching) and the same `-s<seconds>` /
+  persisted-interval resolution, with one extra guard `Watch` doesn't
+  need: `LocalWatch` filters `_sessionDetails.SyncModules` down to those
+  with `Local_Storage_Status == "active"` (the same check `LocalClips`
+  already uses) and returns `"No sync modules with active local storage
+  to watch."` immediately if none qualify, never starting a background
+  task with nothing to poll. `Logout` (`BlinkCameraCall/BlinkLibrary.cs`)
+  calls both `StopWatch()` and `StopLocalWatch()`, so logging out never
+  leaves either watcher running against an invalidated session.
+
 ## 8. How an access token is actually used after login
 
 `HttpClientApiHandler.SetAccessToken` sets a `DefaultRequestHeaders` entry once per

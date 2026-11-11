@@ -136,7 +136,9 @@ for what that looks like and how to stop/restart it.
 | Download by name | `DOWNLOAD <name>` | Downloads a media item by the name `LS` showed for it (device directory only). |
 | Watch for new events | `WATCH [-s<seconds>]` | Starts watching for new doorbell/motion events in the background (default interval: 20 seconds). Starts automatically on login — see below. |
 | Stop watching | `UNWATCH` | Stops the background watch started by `WATCH` (or automatically on login). |
-| Logout | `LOGOUT` | Logs out of the current session (and stops any active `WATCH`). |
+| Watch local storage | `LOCALWATCH [-s<seconds>]` | Starts watching every sync module's SD-card storage for new clips in the background (default interval: 5 seconds). Not started automatically on login — see below. |
+| Stop watching local storage | `UNLOCALWATCH` | Stops the background watch started by `LOCALWATCH`. |
+| Logout | `LOGOUT` | Logs out of the current session (and stops any active `WATCH`/`LOCALWATCH`). |
 | Help | `HELP` | Prints command help. |
 | Quit | `QUIT` or `EXIT` | Exits the program. |
 
@@ -430,6 +432,16 @@ from a third-party open-source client rather than confirmed live, so these
 two commands are the most likely in this release to need a fix after
 real-world use — see [DEVELOPER.md](DEVELOPER.md) if that happens.
 
+Both `WATCH` and `LOCALWATCH` (below) share the same self-tuning polling
+interval: if a round of checking ever takes longer than the currently
+configured interval, the interval grows automatically to fit — just
+enough to cover the slowest thing that round checked, plus a one-second
+margin — and never shrinks back down again afterwards, even if later
+rounds get fast again. Each watcher keeps its own interval, independent
+of the other. Whenever it grows, the new value is saved to `config.json`
+immediately, so it's still in effect the next time you start the
+program, not just for the rest of this session.
+
 ## Watching for new events (`WATCH` / `UNWATCH`)
 
 `WATCH [-s<seconds>]` polls your account in the background for new
@@ -449,8 +461,9 @@ BC>
 - It starts **automatically** the moment you're logged in (see "Automatic
   login" above) — you only need to type `WATCH` yourself if you've since
   run `UNWATCH` and want to restart it, or want a different interval.
-- `-s<seconds>` sets how often it checks (default 20). `UNWATCH` stops it;
-  running `WATCH` again afterwards (with or without `-s`) restarts it.
+- `-s<seconds>` sets the starting interval (default 20, or whatever was
+  last persisted to `config.json` — see the note above). `UNWATCH` stops
+  it; running `WATCH` again afterwards (with or without `-s`) restarts it.
 - Each alert also triggers a console beep, so you'll notice it even if
   you're not looking at the screen.
 - `LOGOUT` stops any active watch too — it won't keep polling with an
@@ -464,10 +477,54 @@ BC>
 | `Not currently watching.` | `UNWATCH` was run with nothing active. |
 | `Stopped watching.` | Success. |
 | `[WATCH] Error checking for new events: <message>` | A single poll failed (network hiccup, etc) — watching keeps running and retries on the next interval. |
+| `[WATCH] Checking for new events took <seconds>s — longer than the current interval, extending it to <seconds>s.` | That round's check took longer than the current interval — see the shared note above. Watching keeps running at the new, longer interval. |
 
 Note: like `VIDEOS`/`DOWNLOAD` (above), this polls Blink's cloud-media
 endpoint rather than receiving a live push, so there's up to one poll
 interval of delay before a real-world event shows up as an alert here.
+
+## Watching local storage (`LOCALWATCH` / `UNLOCALWATCH`)
+
+`LOCALWATCH [-s<seconds>]` polls every sync module's SD-card storage in
+the background for new clips — the same manifest data `LOCALCLIPS` shows
+you on demand — and alerts you the moment one shows up. This covers
+devices whose sync module never uploads to the cloud, so `WATCH` (above)
+would otherwise never notice their motion/doorbell triggers. Like `WATCH`,
+it runs alongside the shell; you can keep typing other commands while it
+runs:
+
+```
+BC> localwatch
+Watching local storage for new clips every 5s across 2 sync module(s). Use UNLOCALWATCH to stop.
+BC> map
+...
+BC> [LOCAL ALERT] New clip: Garage on 'Sync Module 1' at 2026-11-09 14:32:05 UTC (id 7001)
+BC>
+```
+
+- Unlike `WATCH`, it does **not** start automatically on login — you
+  always have to type `LOCALWATCH` yourself.
+- `-s<seconds>` sets the starting interval (default 5, or whatever was
+  last persisted to `config.json` — see the shared note above).
+  `UNLOCALWATCH` stops it; running `LOCALWATCH` again afterwards (with or
+  without `-s`) restarts it.
+- Each round checks every sync module with active local storage in turn
+  (not in parallel), so the interval needs to comfortably cover all of
+  them, not just one — the self-tuning behavior described above accounts
+  for this automatically.
+- Each alert also triggers a console beep, same as `WATCH`.
+- `LOGOUT` stops any active local-storage watch too, same as `WATCH`.
+
+| Message | What it means |
+|---|---|
+| `Not currently logged into Blink service.` | Log in first. |
+| `No sync modules with active local storage to watch.` | None of your sync modules have an active SD card. |
+| `Watching local storage for new clips every <seconds>s across <n> sync module(s). Use UNLOCALWATCH to stop.` | Success. |
+| `Already watching local storage. Use UNLOCALWATCH to stop.` | `LOCALWATCH` was run while one was already active. |
+| `Not currently watching local storage.` | `UNLOCALWATCH` was run with nothing active. |
+| `Stopped watching local storage.` | Success. |
+| `[LOCALWATCH] Error checking '<syncmodule>': <message>` | That sync module's check failed this round (network hiccup, etc) — watching keeps running and retries it on the next round; other sync modules in the same round aren't affected. |
+| `[LOCALWATCH] Checking local storage took <seconds>s across <n> sync module(s) (slowest: <seconds>s) — longer than the current interval, extending it to <seconds>s.` | The whole round (all sync modules) took longer than the current interval — see the shared note above. Watching keeps running at the new, longer interval. |
 
 ## SD-card video clips (`LOCALCLIPS` / `LOCALDOWNLOAD`)
 
