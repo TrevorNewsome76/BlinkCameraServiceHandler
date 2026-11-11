@@ -13,6 +13,7 @@ public class BlinkLibrary(IAdapter adapter)
     private List<ICloudMediaItem>? _lastCloudMedia;
     private (long SyncModuleId, long ManifestId, List<ILocalStorageClip> Clips)? _lastLocalManifest;
     private CancellationTokenSource? _watchCts;
+    private CancellationTokenSource? _localWatchCts;
 
     public ISessionDetails? CurrentSession => _sessionDetails.LoggedInStatus ? _sessionDetails : null;
 
@@ -62,6 +63,7 @@ public class BlinkLibrary(IAdapter adapter)
         if (_sessionDetails.LoggedInStatus)
         {
             StopWatch();
+            StopLocalWatch();
             _sessionDetails.LoggedInStatus = false;
             ILogoutResponse logoutResult =
                 adapter.Logout(_sessionDetails.Account ?? Duck.Implement<IAuthAccount>(new()));
@@ -592,6 +594,70 @@ public class BlinkLibrary(IAdapter adapter)
 
         _watchCts.Cancel();
         _watchCts = null;
+    }
+
+    public string LocalWatch(string[] arguments, Action<string> onAlert, int persistedIntervalSeconds = 5, Action<int>? onIntervalPersisted = null)
+    {
+        if (!(_sessionDetails?.LoggedInStatus ?? false))
+            return "Not currently logged into Blink service.";
+
+        if (_localWatchCts is not null)
+            return "Already watching local storage. Use UNLOCALWATCH to stop.";
+
+        var syncModules = (_sessionDetails.SyncModules ?? new List<IHomeScreenSyncModule>())
+            .Where(s => s.Local_Storage_Status == "active")
+            .ToList();
+
+        if (syncModules.Count == 0)
+            return "No sync modules with active local storage to watch.";
+
+        var explicitIntervalSeconds = ExtractExplicitWatchIntervalSeconds(arguments);
+        int startingSeconds;
+        if (explicitIntervalSeconds.HasValue)
+        {
+            startingSeconds = explicitIntervalSeconds.Value;
+            onIntervalPersisted?.Invoke(startingSeconds);
+        }
+        else
+        {
+            startingSeconds = persistedIntervalSeconds;
+        }
+
+        var account = _sessionDetails.Account!;
+        var cts = new CancellationTokenSource();
+        _localWatchCts = cts;
+        var interval = new AdaptivePollInterval(TimeSpan.FromSeconds(startingSeconds));
+
+        Task.Run(() => LocalStorageWatchPolling.Run(
+            adapter,
+            account,
+            syncModules,
+            (clip, syncModuleName) => onAlert($"[LOCAL ALERT] New clip: {clip.Camera_Name} on '{syncModuleName}' at {clip.Created_At:yyyy-MM-dd HH:mm:ss} UTC (id {clip.Id})"),
+            (ex, syncModuleName) => onAlert($"[LOCALWATCH] Error checking '{syncModuleName}': {ex.Message}"),
+            (total, slowest, newInterval) => onAlert($"[LOCALWATCH] Checking local storage took {total.TotalSeconds:0.0}s across {syncModules.Count} sync module(s) (slowest: {slowest.TotalSeconds:0.0}s) — longer than the current interval, extending it to {newInterval.TotalSeconds:0.0}s."),
+            newInterval => onIntervalPersisted?.Invoke((int)newInterval.TotalSeconds),
+            interval,
+            cts.Token));
+
+        return $"Watching local storage for new clips every {startingSeconds}s across {syncModules.Count} sync module(s). Use UNLOCALWATCH to stop.";
+    }
+
+    public string Unlocalwatch()
+    {
+        if (_localWatchCts is null)
+            return "Not currently watching local storage.";
+
+        StopLocalWatch();
+        return "Stopped watching local storage.";
+    }
+
+    private void StopLocalWatch()
+    {
+        if (_localWatchCts is null)
+            return;
+
+        _localWatchCts.Cancel();
+        _localWatchCts = null;
     }
 
     public string Download(string[] arguments, string? mediaDirectory = null)

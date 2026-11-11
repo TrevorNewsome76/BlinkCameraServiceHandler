@@ -1952,4 +1952,131 @@ public class UnitTest_BlinkLibrary(ITestOutputHelper output)
         //assert
         actualResult.Should().BeEquivalentTo("Watching for new events every 20s. Use UNWATCH to stop.");
     }
+
+    [Fact]
+    public void Test_LocalWatchFailedNotLoggedIn()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently logged into Blink service.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).LocalWatch(Array.Empty<string>(), _ => { });
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalWatchFailedNoActiveLocalStorage()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var loginArguments = new[] { "utest@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        var expected = "No sync modules with active local storage to watch.";
+
+        //act
+        var actualResult = blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        var unlocalwatchResult = blinkLib.Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+        unlocalwatchResult.Should().BeEquivalentTo("Not currently watching local storage.");
+    }
+
+    [Fact]
+    public void Test_LocalWatchSuccessful_ReturnsStatusMessageNamingActiveSyncModuleCount()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        var expected = "Watching local storage for new clips every 5s across 6 sync module(s). Use UNLOCALWATCH to stop.";
+
+        //act
+        var actualResult = blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        blinkLib.Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_LocalWatchFailed_AlreadyWatching()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        var expected = "Already watching local storage. Use UNLOCALWATCH to stop.";
+
+        //act
+        var actualResult = blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        blinkLib.Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_UnlocalwatchFailedNotWatching()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateSettings());
+        var expected = "Not currently watching local storage.";
+
+        //act
+        var actualResult = new BlinkLibrary(mockAdapter).Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+    }
+
+    [Fact]
+    public void Test_UnlocalwatchSuccessful_AllowsRestart()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        var expected = "Stopped watching local storage.";
+
+        //act
+        var actualResult = blinkLib.Unlocalwatch();
+        var restartResult = blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+        blinkLib.Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo(expected);
+        restartResult.Should().BeEquivalentTo("Watching local storage for new clips every 5s across 6 sync module(s). Use UNLOCALWATCH to stop.");
+    }
+
+    [Fact]
+    public void Test_Logout_StopsActiveLocalWatchToo()
+    {
+        //assign
+        var mockAdapter = new MockAdapter(MockSettings.CreateNoThumbnailSettings());
+        var loginArguments = new[] { "unothumbnail@email.com", "pPAssword" };
+        var blinkLib = new BlinkLibrary(mockAdapter);
+        blinkLib.Login(loginArguments);
+        blinkLib.Map();
+        blinkLib.LocalWatch(Array.Empty<string>(), _ => { });
+
+        //act
+        blinkLib.Logout();
+        var actualResult = blinkLib.Unlocalwatch();
+
+        //assert
+        actualResult.Should().BeEquivalentTo("Not currently watching local storage.");
+    }
 }
