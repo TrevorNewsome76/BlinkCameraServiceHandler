@@ -27,6 +27,8 @@ public static class CommandProcessorExtension
         "trigger",
         "watch",
         "unwatch",
+        "localwatch",
+        "unlocalwatch",
         "arm",
         "disarm",
     };
