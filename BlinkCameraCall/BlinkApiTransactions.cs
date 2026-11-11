@@ -132,7 +132,7 @@ public class ApiTransactions(IBlinkSettings settings) : IApiTransactions
     {
         var url = $"https://rest-{account.Tier}.immedia-semi.com/api/v1/accounts/{account.Account_Id}/networks/{networkId}/sync_modules/{syncModuleId}/local_storage/manifest/request";
         var raw = ApiDriver?.Post(url) ?? string.Empty;
-        var result = raw.Deserialize<IManifestRequestResponse>();
+        var result = raw.ParseManifestRequest();
 
         if (result.Id == 0)
             throw new InvalidOperationException($"Blink rejected the request: {raw}");
